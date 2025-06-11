@@ -1,0 +1,103 @@
+{% extends 'system/base.html' %}
+
+{% block title %} Detalles de orden cerrada {{ work_order.number }}{% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header-with-back">
+        <a href="{% url 'closedWorkOrders' %}" class="btn btn-ghost btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>            </svg>
+            Regresar
+        </a>
+        <h1 class="page-title">Detalles de orden cerrada - {{ orders.number }}</h1>
+    </div>
+
+    <div class="grid grid-cols-2">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Información de la orden</h2>
+            </div>
+            <div class="card-content">
+                <div class="space-y">
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Orden de trabajo:</label>
+                        <p>{{ orders.number }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Fecha de creación:</label>
+                        <p>{{ orders.pub_date }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Fecha de cierre:</label>
+                        <p class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-green-600">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            {{ orders.closed_date }}
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Cerrado por: </label>
+                        <p class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            {{ orders.closedBy }}
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Celdas involucradas:</label>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            {% for cell in orders.cells %}
+                            <span class="badge badge-outline">{{ cell }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Detalles de scaneo</h2>
+            </div>
+            <div class="card-content">
+                <div class="space-y">
+                    <div class="form-group">
+                        <label class="form-label font-semibold">Scans totales: {{ work_order.scans|length }}</label>
+                    </div>
+
+                    <div class="space-y scrollable">
+                        {% for scan in work_order.scans %}
+                        <div class="border rounded-lg p-3 bg-gray-50">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold">{{ scan.cell }}</p>
+                                    <p class="text-sm text-gray-600">Part: {{ scan.part_number }}</p>
+                                    <p class="text-sm text-gray-600">Pieces: {{ scan.scanned_pieces }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        {{ scan.timestamp }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-center p-4 text-gray-500">No se realizaron scans en esta orden.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

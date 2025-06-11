@@ -1,0 +1,82 @@
+{% extends 'system/base.html' %}
+
+{% block title %} Ordenes activas {% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header">
+        <h1 class="page-title"> Ordenes de trabajo activas </h1>
+    </div>
+
+    <div class="flex items-center gap-4">   
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-700">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <label class="form-label" for="cell-filter">Filtrar por celda</label>
+        <select id="cell-filter" class="form-control form-select" style="width: 200px">
+            <option value="all"> Todas </option>
+            {% for cell in cells %}
+            <option value="{{ cell.work_cell }}">{{ cell.work_cell }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="grid">        
+        {% for order in orders %}
+        <div class="card card-clickable" data-url="{% url 'activeWorkOrdersDetail' order.workorders.id %}" onclick="window.location.href=this.dataset.url">
+            <div class="card-content">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-semibold text-red-800">{{ order.workorders.number }}</h3>
+                        <p class="text-gray-600 flex items-center mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Created: {{ order.workorders.pub_date|date:'Y-m-d H:i' }}
+                        </p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% for cell in order.items.cells.all %}
+                            <span class="badge badge-outline">{{ cell.work_cell }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <span class="badge badge-success"> Activa </span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center p-6">
+            <p> No hay ordenes de trabajo activas. </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.getElementById('cell-filter').addEventListener('change', function() {
+        const cellFilter = this.value;
+        const url = new URL(window.location);
+        
+        if (cellFilter === 'all') {
+            url.searchParams.delete('cell');
+        } else {
+            url.searchParams.set('cell', cellFilter);
+        }
+        
+        window.location.href = url.toString();
+    });
+
+    // Set the filter value from URL parameter
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const cellParam = urlParams.get('cell');
+        
+        if (cellParam) {
+            document.getElementById('cell-filter').value = cellParam;
+        }
+    });
+</script>
+{% endblock %}

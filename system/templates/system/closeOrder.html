@@ -1,0 +1,69 @@
+{% extends 'system/base.html' %}
+
+{% block title %}Close Work Order{% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header-with-back">
+        <a href="{% url 'activeWorkOrdersDetail' order_id=work_order.id %}" class="btn btn-ghost btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+        </a>
+        <h1 class="page-title">Close Work Order</h1>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Order Summary</h2>
+        </div>
+        <div class="card-content">
+            <div class="space-y">
+                <div>
+                    <h3 class="text-xl font-semibold">{{ work_order.number }}</h3>
+                    <p class="text-gray-600">Created: {{ work_order.pub_date|date:'Y-m-d H:i' }}</p>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold mb-2">Cells Involved:</h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% for cell in work_order_items.cells %}
+                        <span class="badge badge-outline">{{ cell }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold mb-2">Total Scans: {{ work_order.scans|length }}</h4>
+                    <div class="space-y">
+                        {% for scan in work_order.scans %}
+                        <div class="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
+                            <span>{{ scan.cell }} - {{ scan.part_number }}</span>
+                            <span>{{ scan.scanned_pieces }} pieces at {{ scan.timestamp }}</span>
+                        </div>
+                        {% empty %}
+                        <p class="text-sm text-gray-500">No scans recorded.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-red-800 mb-2">Are you sure you want to close this work order?</h4>
+                    <p class="text-sm text-gray-600 mb-4">
+                        This action cannot be undone. The work order will be moved to closed orders.
+                    </p>
+                    <div class="flex gap-4">
+                        <form method="post" action="{% url 'confirm_close_order' order_id=work_order.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Yes, Close Order</button>
+                        </form>
+                        <a href="{% url 'activeWorkOrdersDetail' order_id=work_order.id %}" class="btn btn-outline">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

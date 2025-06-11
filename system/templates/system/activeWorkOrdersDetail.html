@@ -1,0 +1,167 @@
+{% extends 'system/base.html' %}
+
+{% block title %}Receipts - {{ work_order.number }}{% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header-with-back">
+        <a href="{% url 'activeWorkOrders' %}" class="btn btn-ghost btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Regresar
+        </a>
+        <h1 class="page-title">Receipts - WO-{{ work_order.number }}</h1>
+    </div>
+
+    <div class="grid grid-cols-2">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Escanear Piezas</h2>
+            </div>
+            <div class="card-content">                <form method="post" action="{% url 'add_scan' order_id=work_order.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label" for="cell-input">Celda de Trabajo</label>
+                        <input id="cell-input" type="text" name="cell_name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="part-input">Número de Parte</label>
+                        <input id="part-input" type="text" name="part_number" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quantity">Cantidad</label>
+                        <input id="quantity" type="number" name="quantity" class="form-control" value="1" min="1" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full mb-4">Agregar Escaneo</button>
+                </form>
+
+                <div class="flex gap-2">
+                    <button type="button" class="btn btn-outline flex-1" id="next-cell-btn" disabled>
+                        Siguiente Celda
+                    </button>
+                    
+                    <form method="get" action="{% url 'close_order' order_id=work_order.id %}" class="flex-1">
+                        <button type="submit" class="btn btn-outline btn-full" id="close-order-btn" {% if not all_items_complete %}disabled{% endif %}>
+                            Cerrar Orden
+                        </button>
+                    </form>
+                </div>
+
+                {% if errors %}
+                <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h4 class="font-semibold text-red-800 mb-2">Errores:</h4>
+                    {% for error in errors %}
+                    <p class="text-sm text-red-700">{{ error.get_error_display }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Progreso de Escaneo</h2>
+            </div>
+            <div class="card-content">
+                <div class="space-y">
+                    {% for work_order_item in work_order_items %}
+                    <div class="border rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold">{{ work_order_item.items.part_number }}</span>
+                            {% if work_order_item.is_complete %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-700">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="15" y1="9" x2="9" y2="15"></line>
+                                <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="text-sm text-gray-600 mb-2">
+                            Progreso: {{ work_order_item.total_scanned }}/{{ work_order_item.quantity }} piezas
+                        </p>
+                        
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: {{ work_order_item.progress_percentage }}%"></div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <p class="text-sm font-medium text-gray-700">Celdas asignadas:</p>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                {% for cell in work_order_item.cells.all %}
+                                <span class="badge badge-outline text-xs">{{ cell.work_cell }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="space-y">
+                    <h4 class="font-semibold text-red-800 mb-2">Escaneos Recientes</h4>
+                    {% for scan in recent_scans %}
+                    <div class="flex justify-between items-center text-sm">
+                        <span>{{ scan.items.part_number }}</span>
+                        <div class="flex items-center gap-2">
+                            <span>{{ scan.scanned_items }} pcs</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span class="text-gray-500">{{ scan.timestamp|date:"M d, H:i" }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500">No hay escaneos registrados aún.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cellSelect = document.getElementById('current-cell');
+        const partSelect = document.getElementById('part-number');
+        
+        // Filter parts based on selected cell
+        cellSelect.addEventListener('change', function() {
+            const selectedCellId = this.value;
+            const partOptions = partSelect.querySelectorAll('option[value]');
+            
+            partOptions.forEach(option => {
+                if (option.value === '') return; // Skip the default option
+                
+                const allowedCells = option.dataset.cells.split(',').filter(id => id !== '');
+                
+                if (selectedCellId === '' || allowedCells.includes(selectedCellId)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    if (option.selected) {
+                        partSelect.value = '';
+                    }
+                }
+            });
+        });
+        
+        // Reset part selection when cell changes
+        cellSelect.addEventListener('change', function() {
+            partSelect.value = '';
+        });
+    });
+</script>
+{% endblock %}

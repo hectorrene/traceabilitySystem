@@ -1,0 +1,210 @@
+{% extends 'system/base.html' %}
+
+{% block title %} Registrar orden {% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header-with-back">
+        <a href="{% url 'activeWorkOrders' %}" class="btn btn-ghost btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Regresar
+        </a>
+        <h1 class="page-title"> Registrar orden de trabajo </h1>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title"> Detalles </h2>
+        </div>
+        <div class="card-content">
+            <form method="post" action="{% url 'registerWorkOrder' %}">
+                {% csrf_token %}
+                <div class="space-y">
+                    <div class="form-group">
+                        <label class="form-label" for="wo-number"> Orden de trabajo </label>
+                        <input id="wo-number" type="text" name="number" class="form-control" placeholder="Ingrese la orden de trabajo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label text-lg font-semibold"> Número de parte y cantidades </label>
+                        <div id="parts-container" class="space-y mt-2">
+                            <div class="grid grid-cols-2 gap-3 p-3 border rounded-lg part-row">
+                                <div>
+                                    <label class="form-label"> Número de parte </label>
+                                    <select class="form-control form-select part-select" name="part_number" required>
+                                        <option value=""> Seleccione una parte </option>
+                                        {% for part in parts %}
+                                        <option value="{{ part.id }}" data-cells="{{ part.get_valid_cells_json }}">{{ part.part_number }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label"> Cantidad </label>
+                                    <input type="number" class="form-control" name="quantity" placeholder="Cantidad" min="1" required>
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="button" class="btn btn-outline btn-sm remove-part" disabled> Quitar </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" id="add-part-btn" class="btn btn-outline btn-full btn-icon mt-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Añadir parte
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label text-lg font-semibold"> Celdas disponibles para esta orden </label>
+                        <div id="cells-container" class="mt-2">
+                            <div class="grid grid-cols-2 gap-2" id="cells-checkboxes">
+                                <!-- Las celdas se cargarán dinámicamente -->
+                            </div>
+                            <div id="no-parts-message" class="text-gray-500 italic">
+                                Seleccione al menos una parte para ver las celdas disponibles
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="submit" class="btn btn-primary"> Registrar orden de trabajo </button>
+                        <button type="reset" class="btn btn-outline"> Borrar campos </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const partsContainer = document.getElementById('parts-container');
+        const addPartBtn = document.getElementById('add-part-btn');
+        const cellsContainer = document.getElementById('cells-checkboxes');
+        const noPartsMessage = document.getElementById('no-parts-message');
+        
+        // Add new part row
+        addPartBtn.addEventListener('click', function() {
+            const partRow = document.querySelector('.part-row').cloneNode(true);
+            const inputs = partRow.querySelectorAll('input, select');
+            inputs.forEach(input => input.value = '');
+            
+            const removeBtn = partRow.querySelector('.remove-part');
+            removeBtn.disabled = false;
+            removeBtn.addEventListener('click', function() {
+                partRow.remove();
+                updateRemoveButtons();
+                updateAvailableCells();
+            });
+            
+            // Add event listener for part selection
+            const partSelect = partRow.querySelector('.part-select');
+            partSelect.addEventListener('change', updateAvailableCells);
+            
+            partsContainer.appendChild(partRow);
+            updateRemoveButtons();
+        });
+        
+        // Update remove buttons (first row can't be removed)
+        function updateRemoveButtons() {
+            const rows = document.querySelectorAll('.part-row');
+            if (rows.length === 1) {
+                rows[0].querySelector('.remove-part').disabled = true;
+            }
+        }
+        
+        // Update available cells based on selected parts
+        function updateAvailableCells() {
+            const partSelects = document.querySelectorAll('.part-select');
+            let commonCells = null;
+            let hasSelectedParts = false;
+            
+            partSelects.forEach(select => {
+                if (select.value) {
+                    hasSelectedParts = true;
+                    const selectedOption = select.options[select.selectedIndex];
+                    const cellsData = selectedOption.getAttribute('data-cells');
+                    
+                    if (cellsData) {
+                        try {
+                            const partCells = JSON.parse(cellsData);
+                            if (commonCells === null) {
+                                commonCells = new Set(partCells.map(cell => cell.id));
+                            } else {
+                                const partCellsSet = new Set(partCells.map(cell => cell.id));
+                                commonCells = new Set([...commonCells].filter(cellId => partCellsSet.has(cellId)));
+                            }
+                        } catch (e) {
+                            console.error('Error parsing cells data:', e);
+                        }
+                    }
+                }
+            });
+            
+            if (!hasSelectedParts) {
+                cellsContainer.innerHTML = '';
+                noPartsMessage.style.display = 'block';
+                return;
+            }
+            
+            noPartsMessage.style.display = 'none';
+            
+            if (commonCells && commonCells.size > 0) {
+                // Get all cells data to find names
+                const allCellsData = {};
+                partSelects.forEach(select => {
+                    if (select.value) {
+                        const selectedOption = select.options[select.selectedIndex];
+                        const cellsData = selectedOption.getAttribute('data-cells');
+                        if (cellsData) {
+                            try {
+                                const partCells = JSON.parse(cellsData);
+                                partCells.forEach(cell => {
+                                    allCellsData[cell.id] = cell;
+                                });
+                            } catch (e) {
+                                console.error('Error parsing cells data:', e);
+                            }
+                        }
+                    }
+                });
+                
+                cellsContainer.innerHTML = '';
+                commonCells.forEach(cellId => {
+                    const cell = allCellsData[cellId];
+                    if (cell) {
+                        // Crear estructura con las clases CSS definidas
+                        const cellDiv = document.createElement('div');
+                        cellDiv.className = 'cell-selection';
+                        cellDiv.innerHTML = `
+                            <input type="checkbox" id="cell-${cell.id}" name="cells" value="${cell.id}" class="cell-checkbox">
+                            <label for="cell-${cell.id}" class="badge badge-outline cell-badge">
+                                ${cell.name}
+                            </label>
+                        `;
+                        cellsContainer.appendChild(cellDiv);
+                    }
+                });
+            } else {
+                cellsContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
+            }
+        }
+        
+        // Add event listener to initial part select
+        document.querySelector('.part-select').addEventListener('change', updateAvailableCells);
+        
+        // Reset form handler
+        document.querySelector('button[type="reset"]').addEventListener('click', function() {
+            setTimeout(() => {
+                updateAvailableCells();
+            }, 100);
+        });
+    });
+</script>
+{% endblock %}

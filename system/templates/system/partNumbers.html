@@ -1,0 +1,192 @@
+{% extends 'system/base.html' %}
+
+{% block title %} Números de parte activos {% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header">
+        <h1 class="page-title"> Números de parte registrados </h1>
+    </div>
+
+    <div class="flex items-center gap-4">   
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-700">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <label class="form-label" for="cell-filter">Filtrar por celda</label>
+        <select id="cell-filter" class="form-control form-select" style="width: 200px">
+            <option value="all"> Todas </option>
+            {% for cell in cells %}
+            <option value="{{ cell.work_cell }}">{{ cell.work_cell }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="parts-grid">        
+        {% for piece in pieces %}
+            <div class="part-card">
+                <div class="part-card-header">
+                    <!-- Icono de herramienta -->
+                    <div class="tool-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                        </svg>
+                    </div>
+                    <span class="badge badge-success"> Activa </span>
+                </div>
+                
+                <div class="part-card-content">
+                    <h3 class="part-number">{{ piece.part_number }}</h3>
+                    <div class="cells-container">
+                        {% for cell in piece.cells.all %}
+                        <span class="badge badge-outline">{{ cell.work_cell }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+        <div class="text-center p-6 col-span-full">
+            <p> No hay números de parte registrados. </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .parts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+        max-width: 1200px; /* Limitar el ancho máximo para asegurar 3 columnas */
+    }
+
+    .part-card {
+        background-color: white;
+        border: 2px solid var(--color-red-500);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .part-card:hover {
+        border-color: var(--color-red-600);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+    }
+
+    .part-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--color-red-500), var(--color-red-600));
+    }
+
+    .part-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .tool-icon {
+        background-color: var(--color-red-50);
+        border: 2px solid var(--color-red-200);
+        border-radius: 50%;
+        padding: 0.75rem;
+        color: var(--color-red-600);
+        transition: all 0.3s ease;
+    }
+
+    .part-card:hover .tool-icon {
+        background-color: var(--color-red-100);
+        border-color: var(--color-red-300);
+        color: var(--color-red-700);
+        transform: rotate(15deg);
+    }
+
+    .part-card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .part-number {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-red-800);
+        margin: 0;
+        word-break: break-word;
+    }
+
+    .cells-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Responsive para pantallas grandes */
+    @media (min-width: 1200px) {
+        .parts-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Responsive para tablets */
+    @media (max-width: 768px) {
+        .parts-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .part-card {
+            padding: 1rem;
+        }
+        
+        .tool-icon {
+            padding: 0.5rem;
+        }
+        
+        .tool-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    /* Responsive para móviles */
+    @media (max-width: 480px) {
+        .parts-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    document.getElementById('cell-filter').addEventListener('change', function() {
+        const cellFilter = this.value;
+        const url = new URL(window.location);
+        
+        if (cellFilter === 'all') {
+            url.searchParams.delete('cell');
+        } else {
+            url.searchParams.set('cell', cellFilter);
+        }
+        
+        window.location.href = url.toString();
+    });
+
+    // Set the filter value from URL parameter
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const cellParam = urlParams.get('cell');
+        
+        if (cellParam) {
+            document.getElementById('cell-filter').value = cellParam;
+        }
+    });
+</script>
+{% endblock %}

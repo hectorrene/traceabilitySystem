@@ -1,0 +1,56 @@
+{% extends 'system/base.html' %}
+
+{% block title %} Registrar pieza {% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header-with-back">
+        <a href="{% url 'activeWorkOrders' %}" class="btn btn-ghost btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Regresar
+        </a>
+        <h1 class="page-title"> Registrar nueva pieza </h1>
+    </div>
+
+    <div class="grid grid-cols-1 gap-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title"> Información de la pieza </h2>
+            </div>
+            <div class="card-content">
+                <form method="post" action="{% url 'registerPartNumber' %}">
+                    {% csrf_token %}
+                    <div class="space-y">
+                        <div class="form-group">
+                            <label class="form-label" for="part-number"> Número de parte </label>                            <input id="part-number" type="text" name="part_number" class="form-control" placeholder="Ingrese el número de parte" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label"> Celdas disponibles </label>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                {% for cell in cells %}
+                                <div class="cell-selection">
+                                    <input type="checkbox" id="cell-{{ cell }}" name="cells" value="{{ cell.id }}" class="cell-checkbox">
+                                    <label for="cell-{{ cell }}" class="badge badge-outline cell-badge">
+                                        {{ cell.work_cell }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button type="submit" class="btn btn-primary"> Registrar parte </button>
+                            <button type="reset" class="btn btn-outline"> Limpiar información </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
