@@ -1,9 +1,12 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Work Order Traceability System{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'system/img/pestana.png' %}">
     <style>
         /* Base styles */
         :root {
@@ -703,17 +706,6 @@
           overflow-y: auto;
         }
 
-        /* Media queries */
-        @media (max-width: 768px) {
-          .grid-cols-2 {
-            grid-template-columns: 1fr;
-          }
-
-          .grid-cols-4 {
-            grid-template-columns: 1fr;
-          }
-        }
-
         .cell-selection {
             position: relative;
         }
@@ -741,7 +733,199 @@
         .cell-checkbox:focus + .cell-badge {
             box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
         }
-    
+
+        /* RESPONSIVE STYLES FOR ZEBRA MC220J AND MOBILE DEVICES */
+        
+        /* Mobile-first approach - styles for screens smaller than 768px */
+        @media (max-width: 767px) {
+          /* Increase touch targets for better mobile interaction */
+          .btn, .navbar-link, .dropdown-button, .user-icon {
+            min-height: 44px; /* Apple's recommended minimum touch target */
+            padding: 0.75rem 1rem;
+          }
+
+          /* Navigation adjustments */
+          .navbar {
+            padding: 0.75rem;
+          }
+
+          .navbar-container {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+
+          .navbar-title {
+            font-size: 1.25rem;
+            flex: 1;
+            min-width: 0;
+          }
+
+          .navbar-links {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+          }
+
+          .navbar-link {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+            min-height: 40px;
+          }
+
+          /* Dropdown adjustments for mobile */
+          .dropdown-menu {
+            min-width: 250px;
+            max-width: 90vw;
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-50%);
+          }
+
+          .dropdown-item {
+            padding: 1rem;
+            font-size: 1rem;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+          }
+
+          /* Main content adjustments */
+          .main-content {
+            padding: 1rem;
+          }
+
+          .container {
+            padding: 0 0.5rem;
+          }
+
+          /* Typography adjustments */
+          .page-title {
+            font-size: 1.5rem;
+          }
+
+          .card-title {
+            font-size: 1.125rem;
+          }
+
+          /* Form elements for better mobile interaction */
+          .form-control, .form-select {
+            padding: 0.75rem;
+            font-size: 1rem;
+            min-height: 44px;
+          }
+
+          /* Button adjustments */
+          .btn {
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            min-height: 44px;
+          }
+
+          .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            min-height: 36px;
+          }
+
+          /* Grid adjustments */
+          .grid-cols-2 {
+            grid-template-columns: 1fr;
+          }
+
+          .grid-cols-4 {
+            grid-template-columns: 1fr;
+          }
+
+          /* Header adjustments */
+          .header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+          }
+
+          .header-with-back {
+            flex-wrap: wrap;
+          }
+
+          /* Card adjustments */
+          .card-header, .card-content {
+            padding: 1rem;
+          }
+
+          /* Badge adjustments for better readability */
+          .badge {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+          }
+
+          /* Scrollable areas adjustment */
+          .scrollable {
+            max-height: 20rem;
+          }
+
+          /* Cell selection adjustments */
+          .cell-badge {
+            padding: 0.75rem;
+            font-size: 0.875rem;
+          }
+        }
+
+        /* Specific adjustments for very small screens (like Zebra MC220J) */
+        @media (max-width: 480px) {
+          .navbar-title {
+            font-size: 1.125rem;
+          }
+
+          .navbar-links {
+            justify-content: center;
+          }
+
+          .dropdown-menu {
+            min-width: 200px;
+          }
+
+          .main-content {
+            padding: 0.75rem;
+          }
+
+          .page-title {
+            font-size: 1.25rem;
+          }
+
+          /* Reduce spacing for compact display */
+          .space-y {
+            gap: 1rem;
+          }
+
+          .grid {
+            gap: 0.75rem;
+          }
+        }
+
+        /* Landscape orientation adjustments for handheld devices */
+        @media (max-width: 767px) and (orientation: landscape) {
+          .navbar-container {
+            flex-wrap: nowrap;
+          }
+
+          .navbar-links {
+            width: auto;
+            margin-top: 0;
+          }
+
+          .main-content {
+            padding: 1rem 1.5rem;
+          }
+        }
+
+        /* High DPI displays (common in modern handhelds) */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+          .btn, .form-control, .dropdown-item {
+            border-width: 0.5px;
+          }
+        }
     </style>
     {% block extra_css %}{% endblock %}
     <script>
@@ -815,19 +999,37 @@
                     }
                 });
             });
+
+            // Enhanced touch support for mobile devices
+            if ('ontouchstart' in window) {
+                // Add touch-friendly hover effects
+                document.querySelectorAll('.btn, .navbar-link, .dropdown-item').forEach(element => {
+                    element.addEventListener('touchstart', function() {
+                        this.style.opacity = '0.8';
+                    });
+                    
+                    element.addEventListener('touchend', function() {
+                        setTimeout(() => {
+                            this.style.opacity = '';
+                        }, 150);
+                    });
+                });
+            }
         });
 
-      document.addEventListener('DOMContentLoaded', function() {
-        // Reset button should also reset the cell selection visual state
-        const resetButton = document.querySelector('button[type="reset"]');
-        resetButton.addEventListener('click', function() {
-            setTimeout(function() {
-                document.querySelectorAll('.cell-checkbox').forEach(function(checkbox) {
-                    checkbox.checked = false;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset button should also reset the cell selection visual state
+            const resetButton = document.querySelector('button[type="reset"]');
+            if (resetButton) {
+                resetButton.addEventListener('click', function() {
+                    setTimeout(function() {
+                        document.querySelectorAll('.cell-checkbox').forEach(function(checkbox) {
+                            checkbox.checked = false;
+                        });
+                    }, 0);
                 });
-            }, 0);
+            }
         });
-    });
     </script>
     {% block extra_js %}{% endblock %}
 </head>
@@ -882,7 +1084,7 @@
                                         Números de parte
                                     </div>
                                 </a>
-                                <a href="{% url 'registerPartNumber' %}" class="dropdown-item">
+                                <a href="{% url 'errors' %}" class="dropdown-item">
                                     <div class="flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10"></circle>

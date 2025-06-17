@@ -23,11 +23,11 @@
 
     <div class="grid">
         {% for order in orders %}
-        <div class="card card-clickable" data-url="{% url 'closedWorkOrdersDetail' order.workorders.id %}" onclick="window.location.href=this.dataset.url">
+        <div class="card card-clickable" data-url="{% url 'closedWorkOrdersDetail' order.id %}" onclick="window.location.href=this.dataset.url">
             <div class="card-content">
                 <div class="flex justify-between items-start">
                     <div>
-                        <h3 class="text-xl font-semibold text-red-800">{{ order.workorders.number }}</h3>
+                        <h3 class="text-xl font-semibold text-red-800">{{ order.number }}</h3>
                         <p class="text-gray-600 flex items-center mt-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -35,17 +35,17 @@
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
-                            Created: {{ order.workorders.pub_date|date:'Y-m-d H:i' }}
+                            Created: {{ order.pub_date|date:'Y-m-d H:i' }}
                         </p>
                         <p class="text-gray-600 flex items-center mt-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                             </svg>
-                            Closed: {{ order.workorders.closed_date|date:'Y-m-d H:i' }}
+                            Closed: {{ order.closed_date|date:'Y-m-d H:i' }}
                         </p>
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {% for cell in order.items.cells.all %}
+                            {% for cell in order.cells.all %}
                             <span class="badge badge-outline">{{ cell.work_cell }}</span>
                             {% endfor %}
                         </div>
