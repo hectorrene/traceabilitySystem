@@ -35,7 +35,8 @@ class Items(models.Model):
         for cell in self.cells.all(): 
             cells_data.append({
                 'id': cell.id,
-                'name': cell.work_cell
+                'name': cell.work_cell,
+                'lineType': cell.lineType
             })
         return json.dumps(cells_data)
     

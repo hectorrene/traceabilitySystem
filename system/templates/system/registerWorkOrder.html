@@ -63,8 +63,8 @@
                     <div class="form-group">
                         <label class="form-label text-lg font-semibold"> Celdas disponibles para esta orden </label>
                         <div id="cells-container" class="mt-2">
-                            <div class="grid grid-cols-2 gap-2" id="cells-checkboxes">
-                                <!-- Las celdas se cargarán dinámicamente -->
+                            <div id="cells-by-type">
+                                <!-- Las celdas se cargarán dinámicamente agrupadas por tipo -->
                             </div>
                             <div id="no-parts-message" class="text-gray-500 italic">
                                 Seleccione al menos una parte para ver las celdas disponibles
@@ -86,7 +86,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const partsContainer = document.getElementById('parts-container');
         const addPartBtn = document.getElementById('add-part-btn');
-        const cellsContainer = document.getElementById('cells-checkboxes');
+        const cellsByTypeContainer = document.getElementById('cells-by-type');
         const noPartsMessage = document.getElementById('no-parts-message');
         
         // Add new part row
@@ -148,7 +148,7 @@
             });
             
             if (!hasSelectedParts) {
-                cellsContainer.innerHTML = '';
+                cellsByTypeContainer.innerHTML = '';
                 noPartsMessage.style.display = 'block';
                 return;
             }
@@ -156,7 +156,7 @@
             noPartsMessage.style.display = 'none';
             
             if (commonCells && commonCells.size > 0) {
-                // Get all cells data to find names
+                // Get all cells data to find names and types
                 const allCellsData = {};
                 partSelects.forEach(select => {
                     if (select.value) {
@@ -175,24 +175,73 @@
                     }
                 });
                 
-                cellsContainer.innerHTML = '';
+                // Group cells by type
+                const cellsByType = {
+                    'ensamble': [],
+                    'pintura': [],
+                    'empaque': []
+                };
+                
                 commonCells.forEach(cellId => {
                     const cell = allCellsData[cellId];
-                    if (cell) {
-                        // Crear estructura con las clases CSS definidas
-                        const cellDiv = document.createElement('div');
-                        cellDiv.className = 'cell-selection';
-                        cellDiv.innerHTML = `
-                            <input type="checkbox" id="cell-${cell.id}" name="cells" value="${cell.id}" class="cell-checkbox">
-                            <label for="cell-${cell.id}" class="badge badge-outline cell-badge">
-                                ${cell.name}
-                            </label>
-                        `;
-                        cellsContainer.appendChild(cellDiv);
+                    if (cell && cell.lineType) {
+                        cellsByType[cell.lineType].push(cell);
                     }
                 });
+                
+                // Build the HTML with grouped cells
+                cellsByTypeContainer.innerHTML = '';
+                
+                // Type display names
+                const typeNames = {
+                    'ensamble': 'Ensamble',
+                    'pintura': 'Pintura',
+                    'empaque': 'Empaque'
+                };
+                
+                // Type colors for visual distinction
+                const typeColors = {
+                    'ensamble': 'bg-blue-50 border-blue-200',
+                    'pintura': 'bg-green-50 border-green-200',
+                    'empaque': 'bg-yellow-50 border-yellow-200'
+                };
+                
+                Object.keys(cellsByType).forEach(type => {
+                    if (cellsByType[type].length > 0) {
+                        const typeSection = document.createElement('div');
+                        typeSection.className = `mb-4 p-4 border rounded-lg ${typeColors[type]}`;
+                        
+                        const typeHeader = document.createElement('h3');
+                        typeHeader.className = 'text-md font-semibold mb-3 text-gray-700';
+                        typeHeader.textContent = typeNames[type];
+                        typeSection.appendChild(typeHeader);
+                        
+                        const cellsGrid = document.createElement('div');
+                        cellsGrid.className = 'grid grid-cols-2 gap-2';
+                        
+                        cellsByType[type].forEach(cell => {
+                            const cellDiv = document.createElement('div');
+                            cellDiv.className = 'cell-selection';
+                            cellDiv.innerHTML = `
+                                <input type="checkbox" id="cell-${cell.id}" name="cells" value="${cell.id}" class="cell-checkbox">
+                                <label for="cell-${cell.id}" class="badge badge-outline cell-badge">
+                                    ${cell.name}
+                                </label>
+                            `;
+                            cellsGrid.appendChild(cellDiv);
+                        });
+                        
+                        typeSection.appendChild(cellsGrid);
+                        cellsByTypeContainer.appendChild(typeSection);
+                    }
+                });
+                
+                // If no cells were found after grouping
+                if (cellsByTypeContainer.children.length === 0) {
+                    cellsByTypeContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
+                }
             } else {
-                cellsContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
+                cellsByTypeContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
             }
         }
         
