@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from .models import Items,  Errors, WorkOrderItems, WorkOrders, Scans, Cells
 from django.utils import timezone
 from django.urls import reverse_lazy
@@ -8,10 +8,18 @@ from django.db import IntegrityError, models
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from datetime import timedelta
 from django.core.paginator import Paginator
 import datetime, json
+
+def user_in_allowed_groups(user):
+    return user.groups.filter(name__in=['admin', 'ingenieros']).exists()
+
+def noAccess(request):
+    """Página que se muestra cuando no tiene permisos"""
+    return render(request, 'system/sin_permisos.html', status=403)
 
 # Ordenes de trabajo activas
 class activeOrdersListView(ListView):
@@ -49,13 +57,25 @@ class activeOrdersListView(ListView):
         return context
 
 # Registrar una orden de trabajo
-class registerWorkOrder(CreateView):
+class RegisterWorkOrder(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = WorkOrders  
     template_name = 'system/registerWorkOrder.html'
     fields = [] 
-    success_url = reverse_lazy('activeWorkOrders')  
+    success_url = reverse_lazy('activeWorkOrders')
+    
+    def test_func(self):
+        """Verificar si el usuario pertenece a admin o ingenieros"""
+        return self.request.user.groups.filter(name__in=['admin', 'ingenieros']).exists()
+    
+    def handle_no_permission(self):
+        """Qué hacer cuando no tiene permisos"""
+        if not self.request.user.is_authenticated:
+            # Si no está logueado, redirigir a login
+            return self.redirect_to_login(self.request.get_full_path())
+        else:
+            # Si está logueado pero no tiene permisos, redirigir a página de error
+            return redirect('noAccess')
 
-    # Create a new work order
     def post(self, request, *args, **kwargs):
         work_order = WorkOrders.objects.create(
             number=request.POST.get('number'),
@@ -67,17 +87,30 @@ class registerWorkOrder(CreateView):
         if selected_cells:
             work_order.cells.set(selected_cells)
         
-        # Assign part numbers to the work order
+        # Assign part numbers to the work order with serialization
         part_numbers = request.POST.getlist('part_number')
         quantities = request.POST.getlist('quantity')
         
         for part_id, quantity in zip(part_numbers, quantities):
             if part_id and quantity:
-                WorkOrderItems.objects.create(
-                    workorders=work_order,
-                    items_id=part_id,
-                    quantity=int(quantity)
-                )
+                # Obtener el objeto Items para acceder al part_number
+                item = Items.objects.get(id=part_id)
+                base_part_number = item.part_number  # Suponiendo que este es el campo con el número de parte
+                
+                # Crear múltiples items con serialización
+                quantity_int = int(quantity)
+                for i in range(1, quantity_int + 1):
+                    # Formatear el número de serie con ceros a la izquierda (ej: 01, 02, 03...)
+                    serial_suffix = f"{i:02d}"
+                    serialized_part_number = f"{base_part_number}-{serial_suffix}"
+                    
+                    # Crear un WorkOrderItem individual con quantity=1 y el part_number serializado
+                    WorkOrderItems.objects.create(
+                        workorders=work_order,
+                        items_id=part_id,
+                        quantity=1,  # Cada item serializado tiene quantity=1
+                        serialized_part_number=serialized_part_number  # Nuevo campo para almacenar el número serializado
+                    )
         
         return redirect(self.success_url)
     
@@ -88,11 +121,24 @@ class registerWorkOrder(CreateView):
         return context
 
 # Registrar un número de parte
-class registerPartNumber(CreateView):
+class registerPartNumber(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Items
     template_name = 'system/registerPartNumber.html'
     fields = ['part_number', 'cells']
     success_url = reverse_lazy('activeWorkOrders')
+
+    def test_func(self):
+        """Verificar si el usuario pertenece a admin o ingenieros"""
+        return self.request.user.groups.filter(name__in=['admin', 'ingenieros']).exists()
+    
+    def handle_no_permission(self):
+        """Qué hacer cuando no tiene permisos"""
+        if not self.request.user.is_authenticated:
+            # Si no está logueado, redirigir a login
+            return self.redirect_to_login(self.request.get_full_path())
+        else:
+            # Si está logueado pero no tiene permisos, redirigir a página de error
+            return redirect('noAccess')
 
     def form_valid(self, form):
         # Verificar si el part_number ya existe antes de intentar guardar
@@ -168,10 +214,23 @@ class closedOrdersDetailView(DetailView):
         return context
     
 # Todos los numeros de parte
-class partNumbersListView (ListView):
+class partNumbersListView (LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = Items
     template_name = "system/partNumbers.html"
     context_object_name = 'pieces'
+
+    def test_func(self):
+        """Verificar si el usuario pertenece a admin o ingenieros"""
+        return self.request.user.groups.filter(name__in=['admin', 'ingenieros']).exists()
+    
+    def handle_no_permission(self):
+        """Qué hacer cuando no tiene permisos"""
+        if not self.request.user.is_authenticated:
+            # Si no está logueado, redirigir a login
+            return self.redirect_to_login(self.request.get_full_path())
+        else:
+            # Si está logueado pero no tiene permisos, redirigir a página de error
+            return redirect('noAccess')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -184,6 +243,19 @@ class partNumbersDetailView(DetailView):
     template_name = 'system/partNumberDetails.html'
     context_object_name = 'items'
 
+    def test_func(self):
+        """Verificar si el usuario pertenece a admin o ingenieros"""
+        return self.request.user.groups.filter(name__in=['admin', 'ingenieros']).exists()
+    
+    def handle_no_permission(self):
+        """Qué hacer cuando no tiene permisos"""
+        if not self.request.user.is_authenticated:
+            # Si no está logueado, redirigir a login
+            return self.redirect_to_login(self.request.get_full_path())
+        else:
+            # Si está logueado pero no tiene permisos, redirigir a página de error
+            return redirect('noAccess')
+        
 # Todos los errores 
 def errors_view(request):
     errors_list = Errors.objects.select_related('workorders', 'items').order_by('-pub_date')

@@ -1,0 +1,85 @@
+{% extends 'system/base.html' %}
+
+{% block content %}
+<div class="flex justify-center items-center" style="min-height: 60vh;">
+    <div class="card" style="max-width: 600px; width: 100%;">
+        <div class="card-content text-center space-y">
+            <!-- Icono de acceso denegado -->
+            <div class="flex justify-center mb-6">
+                <div style="background-color: var(--color-red-100); border-radius: 50%; padding: 2rem; display: inline-flex;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--color-red-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m4.9 4.9 14.2 14.2"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Título principal -->
+            <h1 class="text-3xl font-bold text-red-800 mb-4">
+                Acceso Denegado
+            </h1>
+
+            <!-- Mensaje principal -->
+            <p class="text-lg text-gray-600 mb-4">
+                No tienes permisos para acceder a esta página.
+            </p>
+
+            <!-- Información adicional -->
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p class="text-red-700">
+                    Esta sección está disponible únicamente para usuarios con permisos de 
+                    <span class="font-semibold">Administrador</span> o <span class="font-semibold">Ingeniero</span>.
+                </p>
+            </div>
+            
+            <!-- Información del usuario actual -->
+            {% if user.is_authenticated %}
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-3">Información de tu cuenta:</h3>
+                    <div class="space-y">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Usuario:</span>
+                            <span class="font-semibold text-gray-800">{{ user.username }}</span>
+                        </div>
+                        <div class="separator"></div>
+                        <div>
+                            <span class="text-gray-600">Grupos asignados:</span>
+                            <div class="mt-2 flex flex-wrap gap-2 justify-center">
+                                {% for grupo in user.groups.all %}
+                                    <span class="badge badge-neutral">{{ grupo.name }}</span>
+                                {% empty %}
+                                    <span class="text-gray-500 font-semibold">Ninguno asignado</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Botones de acción -->
+            <div class="flex gap-4 justify-center flex-wrap">
+                <a href="{% url 'activeWorkOrders' %}" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                        <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    Volver al Inicio
+                </a>
+                
+                <button onclick="history.back()" class="btn btn-outline">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                        <path d="M19 12H5m7-7l-7 7 7 7"/>
+                    </svg>
+                    Página Anterior
+                </button>
+            </div>
+
+            <!-- Mensaje de ayuda -->
+            <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+                <p class="text-sm text-gray-600">
+                    Si crees que deberías tener acceso a esta sección, contacta con tu administrador del sistema.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

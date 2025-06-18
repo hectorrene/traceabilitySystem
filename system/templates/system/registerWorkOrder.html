@@ -84,62 +84,112 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const partsContainer = document.getElementById('parts-container');
-        const addPartBtn = document.getElementById('add-part-btn');
-        const cellsByTypeContainer = document.getElementById('cells-by-type');
-        const noPartsMessage = document.getElementById('no-parts-message');
+    const partsContainer = document.getElementById('parts-container');
+    const addPartBtn = document.getElementById('add-part-btn');
+    const cellsByTypeContainer = document.getElementById('cells-by-type');
+    const noPartsMessage = document.getElementById('no-parts-message');
+    
+    // Add new part row
+    addPartBtn.addEventListener('click', function() {
+        const partRow = document.querySelector('.part-row').cloneNode(true);
+        const inputs = partRow.querySelectorAll('input, select');
+        inputs.forEach(input => input.value = '');
         
-        // Add new part row
-        addPartBtn.addEventListener('click', function() {
-            const partRow = document.querySelector('.part-row').cloneNode(true);
-            const inputs = partRow.querySelectorAll('input, select');
-            inputs.forEach(input => input.value = '');
-            
-            const removeBtn = partRow.querySelector('.remove-part');
-            removeBtn.disabled = false;
-            removeBtn.addEventListener('click', function() {
-                partRow.remove();
-                updateRemoveButtons();
-                updateAvailableCells();
-            });
-            
-            // Add event listener for part selection
-            const partSelect = partRow.querySelector('.part-select');
-            partSelect.addEventListener('change', updateAvailableCells);
-            
-            partsContainer.appendChild(partRow);
+        const removeBtn = partRow.querySelector('.remove-part');
+        removeBtn.disabled = false;
+        removeBtn.addEventListener('click', function() {
+            partRow.remove();
             updateRemoveButtons();
+            updateAvailableCells();
         });
         
-        // Update remove buttons (first row can't be removed)
-        function updateRemoveButtons() {
-            const rows = document.querySelectorAll('.part-row');
-            if (rows.length === 1) {
-                rows[0].querySelector('.remove-part').disabled = true;
+        // Add event listener for part selection
+        const partSelect = partRow.querySelector('.part-select');
+        partSelect.addEventListener('change', updateAvailableCells);
+        
+        partsContainer.appendChild(partRow);
+        updateRemoveButtons();
+    });
+    
+    // Update remove buttons (first row can't be removed)
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('.part-row');
+        if (rows.length === 1) {
+            rows[0].querySelector('.remove-part').disabled = true;
+        }
+    }
+    
+    // Handle cell selection - only one per type
+    function handleCellSelection(checkbox, lineType) {
+        if (checkbox.checked) {
+            // Uncheck all other checkboxes of the same line type
+            const allCheckboxes = document.querySelectorAll(`input[data-line-type="${lineType}"]`);
+            allCheckboxes.forEach(cb => {
+                if (cb !== checkbox) {
+                    cb.checked = false;
+                    cb.parentElement.querySelector('.cell-badge').classList.remove('badge-primary');
+                    cb.parentElement.querySelector('.cell-badge').classList.add('badge-outline');
+                }
+            });
+            // Style the selected checkbox
+            checkbox.parentElement.querySelector('.cell-badge').classList.remove('badge-outline');
+            checkbox.parentElement.querySelector('.cell-badge').classList.add('badge-primary');
+        } else {
+            // Remove styling when unchecked
+            checkbox.parentElement.querySelector('.cell-badge').classList.remove('badge-primary');
+            checkbox.parentElement.querySelector('.cell-badge').classList.add('badge-outline');
+        }
+    }
+    
+    // Update available cells based on selected parts
+    function updateAvailableCells() {
+        const partSelects = document.querySelectorAll('.part-select');
+        let commonCells = null;
+        let hasSelectedParts = false;
+        
+        partSelects.forEach(select => {
+            if (select.value) {
+                hasSelectedParts = true;
+                const selectedOption = select.options[select.selectedIndex];
+                const cellsData = selectedOption.getAttribute('data-cells');
+                
+                if (cellsData) {
+                    try {
+                        const partCells = JSON.parse(cellsData);
+                        if (commonCells === null) {
+                            commonCells = new Set(partCells.map(cell => cell.id));
+                        } else {
+                            const partCellsSet = new Set(partCells.map(cell => cell.id));
+                            commonCells = new Set([...commonCells].filter(cellId => partCellsSet.has(cellId)));
+                        }
+                    } catch (e) {
+                        console.error('Error parsing cells data:', e);
+                    }
+                }
             }
+        });
+        
+        if (!hasSelectedParts) {
+            cellsByTypeContainer.innerHTML = '';
+            noPartsMessage.style.display = 'block';
+            return;
         }
         
-        // Update available cells based on selected parts
-        function updateAvailableCells() {
-            const partSelects = document.querySelectorAll('.part-select');
-            let commonCells = null;
-            let hasSelectedParts = false;
-            
+        noPartsMessage.style.display = 'none';
+        
+        if (commonCells && commonCells.size > 0) {
+            // Get all cells data to find names and types
+            const allCellsData = {};
             partSelects.forEach(select => {
                 if (select.value) {
-                    hasSelectedParts = true;
                     const selectedOption = select.options[select.selectedIndex];
                     const cellsData = selectedOption.getAttribute('data-cells');
-                    
                     if (cellsData) {
                         try {
                             const partCells = JSON.parse(cellsData);
-                            if (commonCells === null) {
-                                commonCells = new Set(partCells.map(cell => cell.id));
-                            } else {
-                                const partCellsSet = new Set(partCells.map(cell => cell.id));
-                                commonCells = new Set([...commonCells].filter(cellId => partCellsSet.has(cellId)));
-                            }
+                            partCells.forEach(cell => {
+                                allCellsData[cell.id] = cell;
+                            });
                         } catch (e) {
                             console.error('Error parsing cells data:', e);
                         }
@@ -147,113 +197,92 @@
                 }
             });
             
-            if (!hasSelectedParts) {
-                cellsByTypeContainer.innerHTML = '';
-                noPartsMessage.style.display = 'block';
-                return;
-            }
+            // Group cells by type
+            const cellsByType = {
+                'ensamble': [],
+                'pintura': [],
+                'empaque': []
+            };
             
-            noPartsMessage.style.display = 'none';
+            commonCells.forEach(cellId => {
+                const cell = allCellsData[cellId];
+                if (cell && cell.lineType) {
+                    cellsByType[cell.lineType].push(cell);
+                }
+            });
             
-            if (commonCells && commonCells.size > 0) {
-                // Get all cells data to find names and types
-                const allCellsData = {};
-                partSelects.forEach(select => {
-                    if (select.value) {
-                        const selectedOption = select.options[select.selectedIndex];
-                        const cellsData = selectedOption.getAttribute('data-cells');
-                        if (cellsData) {
-                            try {
-                                const partCells = JSON.parse(cellsData);
-                                partCells.forEach(cell => {
-                                    allCellsData[cell.id] = cell;
-                                });
-                            } catch (e) {
-                                console.error('Error parsing cells data:', e);
-                            }
-                        }
-                    }
-                });
-                
-                // Group cells by type
-                const cellsByType = {
-                    'ensamble': [],
-                    'pintura': [],
-                    'empaque': []
-                };
-                
-                commonCells.forEach(cellId => {
-                    const cell = allCellsData[cellId];
-                    if (cell && cell.lineType) {
-                        cellsByType[cell.lineType].push(cell);
-                    }
-                });
-                
-                // Build the HTML with grouped cells
-                cellsByTypeContainer.innerHTML = '';
-                
-                // Type display names
-                const typeNames = {
-                    'ensamble': 'Ensamble',
-                    'pintura': 'Pintura',
-                    'empaque': 'Empaque'
-                };
-                
-                // Type colors for visual distinction
-                const typeColors = {
-                    'ensamble': 'bg-blue-50 border-blue-200',
-                    'pintura': 'bg-green-50 border-green-200',
-                    'empaque': 'bg-yellow-50 border-yellow-200'
-                };
-                
-                Object.keys(cellsByType).forEach(type => {
-                    if (cellsByType[type].length > 0) {
-                        const typeSection = document.createElement('div');
-                        typeSection.className = `mb-4 p-4 border rounded-lg ${typeColors[type]}`;
+            // Build the HTML with grouped cells
+            cellsByTypeContainer.innerHTML = '';
+            
+            // Type display names
+            const typeNames = {
+                'ensamble': 'Ensamble',
+                'pintura': 'Pintura',
+                'empaque': 'Empaque'
+            };
+            
+            // Type colors for visual distinction
+            const typeColors = {
+                'ensamble': 'bg-blue-50 border-blue-200',
+                'pintura': 'bg-green-50 border-green-200',
+                'empaque': 'bg-yellow-50 border-yellow-200'
+            };
+            
+            Object.keys(cellsByType).forEach(type => {
+                if (cellsByType[type].length > 0) {
+                    const typeSection = document.createElement('div');
+                    typeSection.className = `mb-4 p-4 border rounded-lg ${typeColors[type]}`;
+                    
+                    const typeHeader = document.createElement('h3');
+                    typeHeader.className = 'text-md font-semibold mb-3 text-gray-700';
+                    typeHeader.textContent = `${typeNames[type]} (selecciona solo una)`;
+                    typeSection.appendChild(typeHeader);
+                    
+                    const cellsGrid = document.createElement('div');
+                    cellsGrid.className = 'grid grid-cols-2 gap-2';
+                    
+                    cellsByType[type].forEach(cell => {
+                        const cellDiv = document.createElement('div');
+                        cellDiv.className = 'cell-selection';
+                        cellDiv.innerHTML = `
+                            <input type="checkbox" id="cell-${cell.id}" name="cells" value="${cell.id}" class="cell-checkbox" data-line-type="${type}">
+                            <label for="cell-${cell.id}" class="badge badge-outline cell-badge cursor-pointer">
+                                ${cell.name}
+                            </label>
+                        `;
                         
-                        const typeHeader = document.createElement('h3');
-                        typeHeader.className = 'text-md font-semibold mb-3 text-gray-700';
-                        typeHeader.textContent = typeNames[type];
-                        typeSection.appendChild(typeHeader);
-                        
-                        const cellsGrid = document.createElement('div');
-                        cellsGrid.className = 'grid grid-cols-2 gap-2';
-                        
-                        cellsByType[type].forEach(cell => {
-                            const cellDiv = document.createElement('div');
-                            cellDiv.className = 'cell-selection';
-                            cellDiv.innerHTML = `
-                                <input type="checkbox" id="cell-${cell.id}" name="cells" value="${cell.id}" class="cell-checkbox">
-                                <label for="cell-${cell.id}" class="badge badge-outline cell-badge">
-                                    ${cell.name}
-                                </label>
-                            `;
-                            cellsGrid.appendChild(cellDiv);
+                        // Add event listener for cell selection
+                        const checkbox = cellDiv.querySelector('input');
+                        checkbox.addEventListener('change', function() {
+                            handleCellSelection(this, type);
                         });
                         
-                        typeSection.appendChild(cellsGrid);
-                        cellsByTypeContainer.appendChild(typeSection);
-                    }
-                });
-                
-                // If no cells were found after grouping
-                if (cellsByTypeContainer.children.length === 0) {
-                    cellsByTypeContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
+                        cellsGrid.appendChild(cellDiv);
+                    });
+                    
+                    typeSection.appendChild(cellsGrid);
+                    cellsByTypeContainer.appendChild(typeSection);
                 }
-            } else {
+            });
+            
+            // If no cells were found after grouping
+            if (cellsByTypeContainer.children.length === 0) {
                 cellsByTypeContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
             }
+        } else {
+            cellsByTypeContainer.innerHTML = '<div class="text-red-500">No hay celdas compatibles para todas las partes seleccionadas</div>';
         }
-        
-        // Add event listener to initial part select
-        document.querySelector('.part-select').addEventListener('change', updateAvailableCells);
-        
-        // Reset form handler
-        document.querySelector('button[type="reset"]').addEventListener('click', function() {
-            setTimeout(() => {
-                updateAvailableCells();
-            }, 100);
-        });
+    }
+    
+    // Add event listener to initial part select
+    document.querySelector('.part-select').addEventListener('change', updateAvailableCells);
+    
+    // Reset form handler
+    document.querySelector('button[type="reset"]').addEventListener('click', function() {
+        setTimeout(() => {
+            updateAvailableCells();
+        }, 100);
     });
+});
 </script>
 {% endblock %}

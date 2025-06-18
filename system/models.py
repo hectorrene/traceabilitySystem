@@ -70,10 +70,13 @@ class WorkOrderItems(models.Model):
     workorders = models.ForeignKey(WorkOrders, on_delete=models.CASCADE, related_name='work_order_items')
     items = models.ForeignKey(Items, on_delete=models.CASCADE, related_name='work_order_items')
     quantity = models.PositiveIntegerField(default=1)
+    serialized_part_number = models.CharField(max_length=100, blank=True, null=True)
     
     # Así se ve en el django admin
     def __str__(self):
-        return f"{self.workorders.number} - {self.items.part_number} (Qty: {self.quantity})"
+        if self.serialized_part_number:
+            return f"{self.serialized_part_number} - {self.items.part_number}"
+        return f"{self.items.part_number} (Qty: {self.quantity})"
     
     class Meta:
         verbose_name_plural = "Work Order Items"
