@@ -541,7 +541,7 @@ def close_order_view(request, order_id):
         messages.error(request, 'Debes escanear todas las piezas antes de cerrar')
         return redirect('activeWorkOrdersDetail', order_id=order_id)
     
-    return render(request, 'system/confirm_close_order.html', {'work_order': work_order})
+    return render(request, 'system/closeOrder.html', {'work_order': work_order})
 
 def confirm_close_order_view(request, order_id):
     """Confirmar cierre de orden"""
