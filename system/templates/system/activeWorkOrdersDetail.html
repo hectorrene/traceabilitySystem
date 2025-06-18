@@ -20,60 +20,73 @@
             <div class="card-header">
                 <h2 class="card-title">Escanear Piezas</h2>
             </div>
-            <div class="card-content">                <form method="post" action="{% url 'add_scan' order_id=work_order.id %}">
+            <div class="card-content">
+                <form id="scan-form">
                     {% csrf_token %}
                     <div class="form-group">
                         <label class="form-label" for="cell-input">Celda de Trabajo</label>
-                        <input id="cell-input" type="text" name="cell_name" class="form-control" required>
+                        <input id="cell-input" type="text" name="work_cell" class="form-control" 
+                               value="{{ current_cell.work_cell }}" readonly>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="part-input">Número de Parte</label>
-                        <input id="part-input" type="text" name="part_number" class="form-control" required>
+                        <input id="part-input" type="text" name="part_number" class="form-control" 
+                               placeholder="Escanea o ingresa el número de parte" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="quantity">Cantidad</label>
-                        <input id="quantity" type="number" name="quantity" class="form-control" value="1" min="1" required>
+                        <input id="quantity" type="number" name="quantity" class="form-control" 
+                               value="1" readonly>
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-full mb-4">Agregar Escaneo</button>
                 </form>
 
                 <div class="flex gap-2">
-                    <button type="button" class="btn btn-outline flex-1" id="next-cell-btn" disabled>
+                    <button type="button" class="btn btn-outline flex-1" id="next-cell-btn" 
+                            {% if not can_advance %}disabled{% endif %}
+                            onclick="advanceStage()">
                         Siguiente Celda
                     </button>
                     
-                    <form method="get" action="{% url 'close_order' order_id=work_order.id %}" class="flex-1">
-                        <button type="submit" class="btn btn-outline btn-full" id="close-order-btn" {% if not all_items_complete %}disabled{% endif %}>
-                            Cerrar Orden
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-outline flex-1" id="close-order-btn" 
+                            {% if not can_close_order %}disabled{% endif %}
+                            onclick="closeOrder()">
+                        Cerrar Orden
+                    </button>
                 </div>
 
-                {% if errors %}
-                <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h4 class="font-semibold text-red-800 mb-2">Errores:</h4>
-                    {% for error in errors %}
-                    <p class="text-sm text-red-700">{{ error.get_error_display }}</p>
-                    {% endfor %}
+                <!-- Área de mensajes de error -->
+                <div id="error-messages" class="mt-4" style="display: none;">
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h4 class="font-semibold text-red-800 mb-2">Error:</h4>
+                        <p id="error-text" class="text-sm text-red-700"></p>
+                    </div>
                 </div>
-                {% endif %}
+
+                <!-- Área de mensajes de éxito -->
+                <div id="success-messages" class="mt-4" style="display: none;">
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p id="success-text" class="text-sm text-green-700"></p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">Progreso de Escaneo</h2>
+                <p class="text-sm text-gray-600">Etapa actual: {{ work_order.current_stage|capfirst }}</p>
             </div>
             <div class="card-content">
-                <div class="space-y">
-                    {% for work_order_item in work_order_items %}
-                    <div class="border rounded-lg p-4">
+                <div class="space-y" id="progress-container">
+                    {% for item_data in progress_data %}
+                    <div class="border rounded-lg p-4" data-item-id="{{ item_data.item.id }}">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-semibold">{{ work_order_item.items.part_number }}</span>
-                            {% if work_order_item.is_complete %}
+                            <span class="font-semibold">{{ item_data.item.serialized_part_number }}</span>
+                            {% if item_data.completed %}
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -88,18 +101,21 @@
                         </div>
                         
                         <p class="text-sm text-gray-600 mb-2">
-                            Progreso: {{ work_order_item.total_scanned }}/{{ work_order_item.quantity }} piezas
+                            Progreso: <span class="scanned-count">{{ item_data.scanned }}</span>/{{ item_data.expected }} piezas
                         </p>
                         
                         <div class="progress-container">
-                            <div class="progress-bar" style="width: {{ work_order_item.progress_percentage }}%"></div>
+                            <div class="progress-bar" style="width: {% widthratio item_data.scanned item_data.expected 100 %}%"></div>
                         </div>
                         
                         <div class="mt-2">
                             <p class="text-sm font-medium text-gray-700">Celdas asignadas:</p>
                             <div class="flex flex-wrap gap-1 mt-1">
-                                {% for cell in work_order_item.cells.all %}
-                                <span class="badge badge-outline text-xs">{{ cell.work_cell }}</span>
+                                {% for cell in item_data.cells_assigned %}
+                                <span class="badge badge-outline text-xs 
+                                    {% if cell.lineType == work_order.current_stage %}bg-blue-100 text-blue-800{% endif %}">
+                                    {{ cell.work_cell }}
+                                </span>
                                 {% endfor %}
                             </div>
                         </div>
@@ -109,23 +125,16 @@
 
                 <div class="separator"></div>
 
+                <!-- Resumen de progreso total -->
                 <div class="space-y">
-                    <h4 class="font-semibold text-red-800 mb-2">Escaneos Recientes</h4>
-                    {% for scan in recent_scans %}
-                    <div class="flex justify-between items-center text-sm">
-                        <span>{{ scan.items.part_number }}</span>
-                        <div class="flex items-center gap-2">
-                            <span>{{ scan.scanned_items }} pcs</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                            </svg>
-                            <span class="text-gray-500">{{ scan.timestamp|date:"M d, H:i" }}</span>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-semibold text-gray-800">Progreso Total:</h4>
+                        <span class="font-semibold" id="total-progress">{{ total_scanned }}/{{ total_items }}</span>
                     </div>
-                    {% empty %}
-                    <p class="text-sm text-gray-500">No hay escaneos registrados aún.</p>
-                    {% endfor %}
+                    <div class="progress-container">
+                        <div class="progress-bar bg-blue-500" id="total-progress-bar" 
+                             style="width: {{ progress_percentage }}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,35 +142,109 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const cellSelect = document.getElementById('current-cell');
-        const partSelect = document.getElementById('part-number');
+document.addEventListener('DOMContentLoaded', function() {
+    const scanForm = document.getElementById('scan-form');
+    const partInput = document.getElementById('part-input');
+    const errorMessages = document.getElementById('error-messages');
+    const successMessages = document.getElementById('success-messages');
+    const errorText = document.getElementById('error-text');
+    const successText = document.getElementById('success-text');
+    const nextCellBtn = document.getElementById('next-cell-btn');
+    const closeOrderBtn = document.getElementById('close-order-btn');
+
+    // Auto-focus en el input de número de parte
+    partInput.focus();
+
+    // Manejar envío del formulario
+    scanForm.addEventListener('submit', function(e) {
+        e.preventDefault();
         
-        // Filter parts based on selected cell
-        cellSelect.addEventListener('change', function() {
-            const selectedCellId = this.value;
-            const partOptions = partSelect.querySelectorAll('option[value]');
-            
-            partOptions.forEach(option => {
-                if (option.value === '') return; // Skip the default option
-                
-                const allowedCells = option.dataset.cells.split(',').filter(id => id !== '');
-                
-                if (selectedCellId === '' || allowedCells.includes(selectedCellId)) {
-                    option.style.display = 'block';
-                } else {
-                    option.style.display = 'none';
-                    if (option.selected) {
-                        partSelect.value = '';
-                    }
-                }
-            });
-        });
-        
-        // Reset part selection when cell changes
-        cellSelect.addEventListener('change', function() {
-            partSelect.value = '';
+        const formData = new FormData(scanForm);
+        const data = {
+            part_number: formData.get('part_number'),
+            work_cell: formData.get('work_cell')
+        };
+
+        // Limpiar mensajes previos
+        hideMessages();
+
+        // Realizar petición AJAX
+        fetch('{% url "add_scan" order_id=work_order.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess(data.message);
+                updateProgress(data.progress);
+                partInput.value = '';
+                partInput.focus();
+            } else {
+                showError(data.error);
+            }
+        })
+        .catch(error => {
+            showError('Error de conexión. Intenta nuevamente.');
         });
     });
+
+    function showError(message) {
+        errorText.textContent = message;
+        errorMessages.style.display = 'block';
+        successMessages.style.display = 'none';
+    }
+
+    function showSuccess(message) {
+        successText.textContent = message;
+        successMessages.style.display = 'block';
+        errorMessages.style.display = 'none';
+    }
+
+    function hideMessages() {
+        errorMessages.style.display = 'none';
+        successMessages.style.display = 'none';
+    }
+
+    function updateProgress(progressData) {
+        // Actualizar progreso total
+        document.getElementById('total-progress').textContent = 
+            progressData.scanned + '/' + progressData.total;
+        document.getElementById('total-progress-bar').style.width = 
+            progressData.percentage + '%';
+
+        // Habilitar botones si es necesario
+        if (progressData.scanned === progressData.total) {
+            nextCellBtn.disabled = false;
+            // Solo habilitar cerrar orden si estamos en la última etapa
+            if ('{{ work_order.current_stage }}' === 'empaque') {
+                closeOrderBtn.disabled = false;
+            }
+        }
+    }
+
+    // Enfocar automáticamente cuando se presiona Enter en cualquier parte
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.activeElement !== partInput) {
+            partInput.focus();
+        }
+    });
+});
+
+function advanceStage() {
+    if (confirm('¿Estás seguro de que quieres avanzar a la siguiente etapa?')) {
+        window.location.href = '{% url "advance_to_next_stage" order_id=work_order.id %}';
+    }
+}
+
+function closeOrder() {
+    if (confirm('¿Estás seguro de que quieres cerrar esta orden de trabajo?')) {
+        window.location.href = '{% url "close_order" order_id=work_order.id %}';
+    }
+}
 </script>
 {% endblock %}

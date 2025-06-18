@@ -52,6 +52,12 @@ class WorkOrders(models.Model):
     closed_date = models.DateTimeField(null=True, blank=True)  
     closedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
+    current_stage = models.CharField(
+        max_length=10, 
+        choices=[('ensamble', 'Ensamble'), ('pintura', 'Pintura'), ('empaque', 'Empaque')],
+        default='ensamble'
+    )
+
     # Así se ve en el django admin
     def __str__(self):
         return f"WO-{self.number} ({'Active' if self.status else 'Closed'})"

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from .models import Items,  Errors, WorkOrderItems, WorkOrders, Scans, Cells
 from django.utils import timezone
 from django.urls import reverse_lazy
@@ -327,303 +327,234 @@ def errors_view(request):
     
     return render(request, 'system/errors.html', context)
 
-@login_required
 def receipts_view(request, order_id):
-    """Vista principal de scaneo y visualización de progreso"""
+    """Vista principal de la pantalla de escaneo - WO-M338845"""
     work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
     
-    # Inicializar sesión si no existe
-    session_key = f'wo_{order_id}'
-    if session_key not in request.session:
-        request.session[session_key] = {
-            'current_cell_type': 'ensamble',
-            'cell_type_index': 0,
-        }
+    # Obtener la celda actual basada en la etapa
+    try:
+        current_cell = work_order.cells.get(lineType=work_order.current_stage)
+    except Cells.DoesNotExist:
+        messages.error(request, f"No hay celda configurada para la etapa {work_order.current_stage}")
+        return redirect('activeWorkOrders')
     
-    session_data = request.session[session_key]
-    current_cell_type = session_data['current_cell_type']
+    # Obtener todos los items de la orden con sus escaneos en la celda actual
+    work_order_items = WorkOrderItems.objects.filter(workorders=work_order).select_related('items')
     
-    # Obtener celdas disponibles para la etapa actual
-    available_cells = Cells.objects.filter(lineType=current_cell_type)
+    # Preparar datos de progreso por cada item
+    progress_data = []
+    total_items = 0
+    total_scanned = 0
     
-    # Obtener work order items con progreso
-    work_order_items_data = []
-    all_items_complete = True
-    can_proceed_to_next_cell = True
-    
-    work_order_items = WorkOrderItems.objects.filter(
-        workorders=work_order
-    ).select_related('items').prefetch_related('scans')
-    
-    for wo_item in work_order_items:
-        # Calcular scans para la etapa actual únicamente
-        current_scans = Scans.objects.filter(
-            workOrderItems=wo_item,
-            items=wo_item.items
-        ).aggregate(total=Sum('scanned_items'))['total'] or 0
+    for item in work_order_items:
+        # Contar escaneos en la celda actual para este item específico
+        scanned_count = Scans.objects.filter(
+            workOrderItems=item,
+            items=item.items
+        ).count()
         
-        # Para el cálculo de progreso por etapa actual
-        remaining_quantity = max(0, wo_item.quantity - current_scans)
-        progress_percentage = min(100, (current_scans / wo_item.quantity) * 100) if wo_item.quantity > 0 else 0
-        is_complete = current_scans >= wo_item.quantity
+        # El item serializado cuenta como 1 pieza
+        expected_count = 1
+        total_items += expected_count
+        total_scanned += min(scanned_count, expected_count)
         
-        # Para verificar si puede proceder a siguiente etapa
-        if not is_complete:
-            can_proceed_to_next_cell = False
-        
-        # Para verificar si puede cerrar la orden (necesita scans en las 3 etapas)
-        total_required_scans = wo_item.quantity * 3  # 3 etapas
-        total_scans = Scans.objects.filter(
-            workOrderItems=wo_item,
-            items=wo_item.items
-        ).aggregate(total=Sum('scanned_items'))['total'] or 0
-        
-        if total_scans < total_required_scans:
-            all_items_complete = False
-        
-        work_order_items_data.append({
-            'item': wo_item,
-            'part_number': wo_item.items.part_number,
-            'required_quantity': wo_item.quantity,
-            'scanned_quantity': current_scans,
-            'remaining_quantity': remaining_quantity,
-            'progress_percentage': progress_percentage,
-            'is_complete': is_complete,
+        progress_data.append({
+            'item': item,
+            'scanned': scanned_count,
+            'expected': expected_count,
+            'completed': scanned_count >= expected_count,
+            'cells_assigned': list(item.items.cells.values('work_cell', 'lineType'))
         })
     
-    # Calcular progreso general
-    if work_order_items_data:
-        overall_progress = sum(item['progress_percentage'] for item in work_order_items_data) / len(work_order_items_data)
-    else:
-        overall_progress = 0
+    # Verificar si se puede avanzar a la siguiente etapa
+    can_advance = total_scanned == total_items and total_items > 0
     
-    # Determinar siguiente etapa
-    cell_type_index = session_data['cell_type_index']
-    next_cell_type = None
-    if cell_type_index < 2:  # 0=ensamble, 1=pintura, 2=empaque
-        next_types = ['ensamble', 'pintura', 'empaque']
-        next_cell_type = next_types[cell_type_index + 1]
-    
-    # Obtener scans y errores recientes
-    recent_scans = Scans.objects.filter(
-        workOrderItems__workorders=work_order
-    ).select_related('items').order_by('-timestamp')[:10]
-    
-    recent_errors = Errors.objects.filter(
-        workorders=work_order
-    ).select_related('items').order_by('-pub_date')[:5]
+    # Verificar si se puede cerrar la orden (todas las etapas completadas)
+    can_close_order = False
+    if can_advance and work_order.current_stage == 'empaque':
+        can_close_order = True
     
     context = {
         'work_order': work_order,
-        'current_cell_type': current_cell_type,
-        'available_cells': available_cells,
-        'work_order_items': work_order_items_data,
-        'recent_scans': recent_scans,
-        'recent_errors': recent_errors,
-        'can_proceed_to_next_cell': can_proceed_to_next_cell,
-        'next_cell_type': next_cell_type,
-        'overall_progress': overall_progress,
-        'all_items_complete': all_items_complete,
-        'order_id': order_id,
+        'current_cell': current_cell,
+        'progress_data': progress_data,
+        'total_items': total_items,
+        'total_scanned': total_scanned,
+        'can_advance': can_advance,
+        'can_close_order': can_close_order,
+        'progress_percentage': (total_scanned / total_items * 100) if total_items > 0 else 0
     }
     
     return render(request, 'system/activeWorkOrdersDetail.html', context)
 
-@login_required
 def add_scan_view(request, order_id):
-    """Procesar scans con validaciones completas"""
+    """Vista para agregar un escaneo via AJAX"""
     if request.method != 'POST':
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
     
     work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
     
-    # Obtener parámetros del POST
-    celda_trabajo = request.POST.get('celda_trabajo', '').strip()
-    numero_parte = request.POST.get('numero_parte', '').strip()
-    cantidad_str = request.POST.get('cantidad', '1').strip()
-    
     try:
-        cantidad = int(cantidad_str)
-        if cantidad <= 0:
-            raise ValueError("Cantidad debe ser mayor a 0")
-    except ValueError:
-        messages.error(request, "Error: Cantidad inválida")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Obtener estado de sesión
-    session_key = f'wo_{order_id}'
-    if session_key not in request.session:
-        messages.error(request, "Error: Sesión inválida")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    current_cell_type = request.session[session_key]['current_cell_type']
-    
-    # Validación 1: Verificar que Items.part_number existe
-    try:
-        item = Items.objects.get(part_number=numero_parte)
-    except Items.DoesNotExist:
-        Errors.objects.create(
-            workorders=work_order,
-            items=None,
-            error='wrong_work_order',
-            description=f"Part number {numero_parte} no existe en el sistema"
-        )
-        messages.error(request, "Error: Esta pieza no pertenece a esta orden de trabajo")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Validación 2: Verificar que pertenece a WorkOrderItems de esta orden
-    try:
-        wo_item = WorkOrderItems.objects.get(workorders=work_order, items=item)
-    except WorkOrderItems.DoesNotExist:
-        Errors.objects.create(
-            workorders=work_order,
-            items=item,
-            error='wrong_work_order',
-            description=f"Part number {numero_parte} no pertenece a la orden {work_order.number}"
-        )
-        messages.error(request, "Error: Esta pieza no pertenece a esta orden de trabajo")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Validación 3: Verificar celda correcta según flujo
-    try:
-        selected_cell = Cells.objects.get(work_cell=celda_trabajo)
-        if selected_cell.lineType != current_cell_type:
+        data = json.loads(request.body)
+        scanned_part = data.get('part_number', '').strip()
+        current_cell_name = data.get('work_cell', '').strip()
+        
+        if not scanned_part or not current_cell_name:
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'})
+        
+        # Verificar que la celda existe y corresponde a la etapa actual
+        try:
+            current_cell = Cells.objects.get(work_cell=current_cell_name, lineType=work_order.current_stage)
+        except Cells.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Celda no válida para la etapa actual'})
+        
+        # Buscar el WorkOrderItem con el número de parte serializado
+        try:
+            work_order_item = WorkOrderItems.objects.get(
+                workorders=work_order,
+                serialized_part_number=scanned_part
+            )
+        except WorkOrderItems.DoesNotExist:
+            # Error: Esta pieza no pertenece a esta orden de trabajo
             Errors.objects.create(
                 workorders=work_order,
-                items=item,
-                error='wrong_cell',
-                description=f"Celda {celda_trabajo} es tipo {selected_cell.lineType}, pero la etapa actual es {current_cell_type}"
+                items_id=1,  # Necesitarás ajustar esto
+                error='wrong_work_order',
+                description=f'Pieza escaneada: {scanned_part} no pertenece a WO-{work_order.number}'
             )
-            messages.error(request, "Error: Esta pieza no debería estar aún en esta celda")
-            return redirect('activeWorkOrdersDetail', order_id=order_id)
-    except Cells.DoesNotExist:
-        messages.error(request, "Error: Celda de trabajo no válida")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Validación 4: Verificar límite de cantidad
-    current_scans = Scans.objects.filter(
-        workOrderItems=wo_item,
-        items=item
-    ).aggregate(total=Sum('scanned_items'))['total'] or 0
-    
-    if current_scans + cantidad > wo_item.quantity:
-        Errors.objects.create(
-            workorders=work_order,
-            items=item,
-            error='exceeded_limit',
-            description=f"Intentó escanear {cantidad} piezas, pero solo quedan {wo_item.quantity - current_scans} disponibles"
-        )
-        messages.error(request, "Error: Excedió el límite de piezas en esta celda")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Validación 5: Verificar duplicados recientes (últimos 5 minutos)
-    five_minutes_ago = timezone.now() - timedelta(minutes=5)
-    recent_scan = Scans.objects.filter(
-        workOrderItems=wo_item,
-        items=item,
-        timestamp__gte=five_minutes_ago
-    ).exists()
-    
-    if recent_scan:
-        Errors.objects.create(
-            workorders=work_order,
-            items=item,
-            error='already_entered',
-            description=f"Scan duplicado detectado para {numero_parte} en los últimos 5 minutos"
-        )
-        messages.error(request, "Error: Esta pieza ya fue ingresada")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Si todas las validaciones pasan, crear el scan
-    Scans.objects.create(
-        workOrderItems=wo_item,
-        items=item,
-        scanned_items=cantidad
-    )
-    
-    messages.success(request, f"Éxito: Escaneadas {cantidad} piezas de {numero_parte}")
-    return redirect('activeWorkOrdersDetail', order_id=order_id)
-
-@login_required
-def advance_to_next_stage(request, order_id):
-    """Cambiar automáticamente a siguiente etapa"""
-    work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
-    
-    session_key = f'wo_{order_id}'
-    if session_key not in request.session:
-        messages.error(request, "Error: Sesión inválida")
-        return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    session_data = request.session[session_key]
-    current_index = session_data['cell_type_index']
-    
-    # Verificar que etapa actual esté 100% completa
-    work_order_items = WorkOrderItems.objects.filter(workorders=work_order)
-    
-    for wo_item in work_order_items:
-        current_scans = Scans.objects.filter(
-            workOrderItems=wo_item,
-            items=wo_item.items
-        ).aggregate(total=Sum('scanned_items'))['total'] or 0
-        
-        if current_scans < wo_item.quantity:
-            messages.error(request, "Error: No se puede avanzar. Faltan piezas por escanear en la etapa actual")
-            return redirect('activeWorkOrdersDetail', order_id=order_id)
-    
-    # Avanzar a siguiente etapa
-    if current_index < 2:  # 0=ensamble, 1=pintura, 2=empaque
-        new_index = current_index + 1
-        cell_types = ['ensamble', 'pintura', 'empaque']
-        new_cell_type = cell_types[new_index]
-        
-        request.session[session_key] = {
-            'current_cell_type': new_cell_type,
-            'cell_type_index': new_index,
-        }
-        
-        messages.success(request, f"Éxito: Avanzado a etapa de {new_cell_type}")
-    else:
-        messages.info(request, "Ya está en la última etapa")
-    
-    return redirect('activeWorkOrdersDetail', order_id=order_id)
-
-@login_required
-def close_order_view(request, order_id):
-    """Mostrar pantalla de confirmación de cierre"""
-    work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
-    
-    # Calcular items incompletos
-    incomplete_items = []
-    can_close = True
-    
-    work_order_items = WorkOrderItems.objects.filter(workorders=work_order)
-    
-    for wo_item in work_order_items:
-        total_required = wo_item.quantity * 3  # 3 etapas
-        total_scanned = Scans.objects.filter(
-            workOrderItems=wo_item,
-            items=wo_item.items
-        ).aggregate(total=Sum('scanned_items'))['total'] or 0
-        
-        if total_scanned < total_required:
-            can_close = False
-            incomplete_items.append({
-                'part_number': wo_item.items.part_number,
-                'completed': total_scanned,
-                'required': total_required
+            return JsonResponse({
+                'success': False, 
+                'error': 'Esta pieza no pertenece a esta orden de trabajo',
+                'error_type': 'wrong_work_order'
             })
-    
-    context = {
-        'work_order': work_order,
-        'incomplete_items': incomplete_items,
-        'can_close': can_close,
-        'order_id': order_id,
-    }
-    
-    return render(request, 'system/close_order.html', context)
+        
+        # Verificar que la pieza puede estar en esta celda (routing correcto)
+        if not work_order_item.items.cells.filter(lineType=work_order.current_stage).exists():
+            # Error: Esta pieza no debería estar aún en esta celda
+            Errors.objects.create(
+                workorders=work_order,
+                items=work_order_item.items,
+                error='wrong_cell',
+                description=f'Pieza {scanned_part} no tiene routing para {work_order.current_stage}'
+            )
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta pieza no debería estar aún en esta celda',
+                'error_type': 'wrong_cell'
+            })
+        
+        # Verificar si ya fue escaneada en esta celda
+        existing_scan = Scans.objects.filter(
+            workOrderItems=work_order_item,
+            items=work_order_item.items
+        ).first()
+        
+        if existing_scan:
+            # Error: Esta pieza ya fue ingresada
+            Errors.objects.create(
+                workorders=work_order,
+                items=work_order_item.items,
+                error='already_entered',
+                description=f'Pieza {scanned_part} ya fue escaneada en {work_order.current_stage}'
+            )
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta pieza ya fue ingresada',
+                'error_type': 'already_entered'
+            })
+        
+        # Crear el escaneo
+        scan = Scans.objects.create(
+            workOrderItems=work_order_item,
+            items=work_order_item.items,
+            scanned_items=1
+        )
+        
+        # Recalcular progreso
+        total_items = WorkOrderItems.objects.filter(workorders=work_order).count()
+        scanned_items = Scans.objects.filter(
+            workOrderItems__workorders=work_order
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Pieza {scanned_part} registrada correctamente',
+            'progress': {
+                'scanned': scanned_items,
+                'total': total_items,
+                'percentage': (scanned_items / total_items * 100) if total_items > 0 else 0
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'})
 
-@login_required
+def advance_to_next_stage(request, order_id):
+    """Avanzar a la siguiente etapa del proceso"""
+    work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
+    
+    # Verificar que todas las piezas de la etapa actual estén escaneadas
+    total_items = WorkOrderItems.objects.filter(workorders=work_order).count()
+    scanned_items = Scans.objects.filter(
+        workOrderItems__workorders=work_order
+    ).count()
+    
+    if scanned_items < total_items:
+        messages.error(request, 'Debes escanear todas las piezas antes de avanzar')
+        return redirect('activeWorkOrdersDetail', order_id=order_id)
+    
+    # Determinar siguiente etapa
+    stage_order = ['ensamble', 'pintura', 'empaque']
+    current_index = stage_order.index(work_order.current_stage)
+    
+    if current_index < len(stage_order) - 1:
+        # Limpiar escaneos para la nueva etapa
+        Scans.objects.filter(workOrderItems__workorders=work_order).delete()
+        
+        # Avanzar etapa
+        work_order.current_stage = stage_order[current_index + 1]
+        work_order.save()
+        
+        messages.success(request, f'Avanzado a etapa: {work_order.current_stage}')
+    else:
+        messages.info(request, 'Ya estás en la última etapa')
+    
+    return redirect('activeWorkOrdersDetail', order_id=order_id)
+
+def close_order_view(request, order_id):
+    """Cerrar orden de trabajo"""
+    work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
+    
+    # Verificar que está en la etapa final y todas las piezas están escaneadas
+    if work_order.current_stage != 'empaque':
+        messages.error(request, 'Debes completar todas las etapas antes de cerrar')
+        return redirect('activeWorkOrdersDetail', order_id=order_id)
+    
+    total_items = WorkOrderItems.objects.filter(workorders=work_order).count()
+    scanned_items = Scans.objects.filter(
+        workOrderItems__workorders=work_order
+    ).count()
+    
+    if scanned_items < total_items:
+        messages.error(request, 'Debes escanear todas las piezas antes de cerrar')
+        return redirect('activeWorkOrdersDetail', order_id=order_id)
+    
+    return render(request, 'system/confirm_close_order.html', {'work_order': work_order})
+
 def confirm_close_order_view(request, order_id):
+    """Confirmar cierre de orden"""
+    if request.method == 'POST':
+        work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
+        work_order.status = False
+        work_order.closedBy = request.user
+        work_order.save()
+        
+        messages.success(request, f'Orden WO-{work_order.number} cerrada correctamente')
+        return redirect('activeWorkOrders')
+    
+    return redirect('activeWorkOrdersDetail', order_id=order_id)
     """Ejecutar cierre definitivo de orden"""
     if request.method != 'POST':
         return redirect('close_order', order_id=order_id)
