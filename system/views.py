@@ -14,9 +14,11 @@ from datetime import timedelta
 from django.core.paginator import Paginator
 import datetime, json
 
+# grupos de usuario que pueden accesar a la pestaña de añadir
 def user_in_allowed_groups(user):
     return user.groups.filter(name__in=['admin', 'ingenieros']).exists()
 
+# Muestra la página si un usuario sin acceso se quiere meter a una pagina
 def noAccess(request):
     """Página que se muestra cuando no tiene permisos"""
     return render(request, 'system/sin_permisos.html', status=403)
@@ -200,7 +202,7 @@ class closedOrdersListView(ListView):
     
 # Detalles de ordenes de trabajo cerradas
 class closedOrdersDetailView(DetailView):
-    model = WorkOrderItems
+    model = WorkOrders
     template_name = 'system/closedOrderDetails.html'
     context_object_name = 'orders'
 
@@ -209,8 +211,28 @@ class closedOrdersDetailView(DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        work_order_items = WorkOrderItems.objects.filter(workorders=self.object).select_related('items')
-        context['scans'] = Scans.objects.filter(workOrderItems__in=work_order_items)
+        # Obtener todos los items de la orden con sus detalles
+        work_order_items = WorkOrderItems.objects.filter(
+            workorders=self.object
+        ).select_related('items')
+        
+        # Obtener todos los scans organizados por item
+        scans_by_item = {}
+        total_scans = 0
+        for item in work_order_items:
+            item_scans = Scans.objects.filter(
+                workOrderItems=item
+            ).select_related('items').order_by('-timestamp')
+            scans_by_item[item.id] = item_scans
+            total_scans += item_scans.count()
+        
+        # Agregar al contexto
+        context.update({
+            'work_order_items': work_order_items,
+            'scans_by_item': scans_by_item,
+            'total_scans': total_scans,
+            'cells': self.object.cells.all(),  # Todas las celdas asignadas a la orden
+        })
         return context
     
 # Todos los numeros de parte
@@ -357,13 +379,12 @@ def receipts_view(request, order_id):
         expected_count = 1
         total_items += expected_count
         total_scanned += min(scanned_count, expected_count)
-        
         progress_data.append({
             'item': item,
             'scanned': scanned_count,
             'expected': expected_count,
             'completed': scanned_count >= expected_count,
-            'cells_assigned': list(item.items.cells.values('work_cell', 'lineType'))
+            'cells_assigned': list(work_order.cells.values('work_cell', 'lineType'))  # Solo las celdas de la orden de trabajo
         })
     
     # Verificar si se puede avanzar a la siguiente etapa
@@ -391,23 +412,23 @@ def add_scan_view(request, order_id):
     """Vista para agregar un escaneo via AJAX"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'})
-    
+
     work_order = get_object_or_404(WorkOrders, id=order_id, status=True)
-    
+
     try:
         data = json.loads(request.body)
         scanned_part = data.get('part_number', '').strip()
         current_cell_name = data.get('work_cell', '').strip()
-        
+
         if not scanned_part or not current_cell_name:
             return JsonResponse({'success': False, 'error': 'Datos incompletos'})
-        
+
         # Verificar que la celda existe y corresponde a la etapa actual
         try:
             current_cell = Cells.objects.get(work_cell=current_cell_name, lineType=work_order.current_stage)
         except Cells.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Celda no válida para la etapa actual'})
-        
+
         # Buscar el WorkOrderItem con el número de parte serializado
         try:
             work_order_item = WorkOrderItems.objects.get(
@@ -415,22 +436,33 @@ def add_scan_view(request, order_id):
                 serialized_part_number=scanned_part
             )
         except WorkOrderItems.DoesNotExist:
-            # Error: Esta pieza no pertenece a esta orden de trabajo
+            # Intentar encontrar el número de parte base del número serializado
+            base_part_number = scanned_part.split('-')[0] if '-' in scanned_part else scanned_part
+            try:
+                scanned_item = Items.objects.get(part_number=base_part_number)
+            except Items.DoesNotExist:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Número de parte no encontrado en la orden',
+                    'error_type': 'invalid_part'
+                })
+            # Usar mensaje del modelo
+            error_msg = dict(Errors.ERROR_CHOICES).get('wrong_work_order', 'Error de orden')
             Errors.objects.create(
                 workorders=work_order,
-                items_id=1,  # Necesitarás ajustar esto
+                items=scanned_item,
                 error='wrong_work_order',
                 description=f'Pieza escaneada: {scanned_part} no pertenece a WO-{work_order.number}'
             )
             return JsonResponse({
                 'success': False, 
-                'error': 'Esta pieza no pertenece a esta orden de trabajo',
+                'error': f'{error_msg}: {scanned_part}',
                 'error_type': 'wrong_work_order'
             })
-        
+
         # Verificar que la pieza puede estar en esta celda (routing correcto)
         if not work_order_item.items.cells.filter(lineType=work_order.current_stage).exists():
-            # Error: Esta pieza no debería estar aún en esta celda
+            error_msg = dict(Errors.ERROR_CHOICES).get('wrong_cell', 'Error de celda')
             Errors.objects.create(
                 workorders=work_order,
                 items=work_order_item.items,
@@ -439,18 +471,18 @@ def add_scan_view(request, order_id):
             )
             return JsonResponse({
                 'success': False,
-                'error': 'Esta pieza no debería estar aún en esta celda',
+                'error': f'{error_msg}: {scanned_part} en {work_order.current_stage}',
                 'error_type': 'wrong_cell'
             })
-        
+
         # Verificar si ya fue escaneada en esta celda
         existing_scan = Scans.objects.filter(
             workOrderItems=work_order_item,
             items=work_order_item.items
         ).first()
-        
+
         if existing_scan:
-            # Error: Esta pieza ya fue ingresada
+            error_msg = dict(Errors.ERROR_CHOICES).get('already_entered', 'Ya ingresada')
             Errors.objects.create(
                 workorders=work_order,
                 items=work_order_item.items,
@@ -459,23 +491,23 @@ def add_scan_view(request, order_id):
             )
             return JsonResponse({
                 'success': False,
-                'error': 'Esta pieza ya fue ingresada',
+                'error': f'{error_msg}: {scanned_part} en {work_order.current_stage}',
                 'error_type': 'already_entered'
             })
-        
+
         # Crear el escaneo
         scan = Scans.objects.create(
             workOrderItems=work_order_item,
             items=work_order_item.items,
             scanned_items=1
         )
-        
+
         # Recalcular progreso
         total_items = WorkOrderItems.objects.filter(workorders=work_order).count()
         scanned_items = Scans.objects.filter(
             workOrderItems__workorders=work_order
         ).count()
-        
+
         return JsonResponse({
             'success': True,
             'message': f'Pieza {scanned_part} registrada correctamente',
@@ -485,7 +517,7 @@ def add_scan_view(request, order_id):
                 'percentage': (scanned_items / total_items * 100) if total_items > 0 else 0
             }
         })
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'})
     except Exception as e:
@@ -540,8 +572,28 @@ def close_order_view(request, order_id):
     if scanned_items < total_items:
         messages.error(request, 'Debes escanear todas las piezas antes de cerrar')
         return redirect('activeWorkOrdersDetail', order_id=order_id)
+      # Obtener todos los items y sus escaneos
+    work_order_items = WorkOrderItems.objects.filter(workorders=work_order).select_related('items')
+    all_scans = []
+    total_items = 0
+    total_scanned = 0
     
-    return render(request, 'system/closeOrder.html', {'work_order': work_order})
+    for item in work_order_items:
+        scans = Scans.objects.filter(workOrderItems=item).select_related('items').order_by('-timestamp')
+        all_scans.extend(scans)
+        total_items += 1  # Cada item serializado cuenta como 1
+        if scans.exists():
+            total_scanned += 1
+    
+    context = {
+        'work_order': work_order,
+        'all_scans': all_scans,
+        'work_order_items': work_order_items,
+        'total_items': total_items,
+        'total_scanned': total_scanned,
+        'completion_percentage': (total_scanned / total_items * 100) if total_items > 0 else 0
+    }
+    return render(request, 'system/closeOrder.html', context)
 
 def confirm_close_order_view(request, order_id):
     """Confirmar cierre de orden"""

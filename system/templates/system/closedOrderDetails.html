@@ -1,6 +1,7 @@
 {% extends 'system/base.html' %}
+{% load custom_filters %}
 
-{% block title %} Detalles de orden cerrada {{ work_order.number }}{% endblock %}
+{% block title %}Detalles de orden cerrada {{ work_order.number }}{% endblock %}
 
 {% block content %}
 <div class="space-y">
@@ -48,12 +49,11 @@
                             </svg>
                             {{ orders.closedBy }}
                         </p>
-                    </div>
-                    <div class="form-group">
+                    </div>                    <div class="form-group">
                         <label class="form-label font-semibold">Celdas involucradas:</label>
                         <div class="flex flex-wrap gap-2 mt-2">
-                            {% for cell in order.workorders.cells %}
-                            <span class="badge badge-outline">{{ cell }}</span>
+                            {% for cell in cells %}
+                            <span class="badge badge-outline">{{ cell.work_cell }} ({{ cell.get_lineType_display }})</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -64,36 +64,35 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">Detalles de scaneo</h2>
+                <p class="text-sm text-gray-600">Total de scans: {{ total_scans }}</p>
             </div>
             <div class="card-content">
                 <div class="space-y">
-                    <div class="form-group">
-                        <label class="form-label font-semibold">Scans totales: {{ work_order.scans|length }}</label>
-                    </div>
-
-                    <div class="space-y scrollable">
-                        {% for scan in work_order.scans %}
-                        <div class="border rounded-lg p-3 bg-gray-50">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-semibold">{{ scan.cell }}</p>
-                                    <p class="text-sm text-gray-600">Parte: {{ scan.part_number }}</p>
-                                    <p class="text-sm text-gray-600">Piezas: {{ scan.scanned_pieces }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm text-gray-500 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <polyline points="12 6 12 12 16 14"></polyline>
-                                        </svg>
-                                        {{ scan.timestamp }}
-                                    </p>
+                    {% for item in work_order_items %}
+                    <div class="border rounded-lg p-4 bg-gray-50 mb-4">
+                        <h3 class="font-semibold mb-2">{{ item.items.part_number }}</h3>
+                        <p class="text-sm text-gray-600 mb-2">Número serializado: {{ item.serialized_part_number }}</p>
+                        
+                        {% with item_scans=scans_by_item|get_item:item.id %}
+                        <div class="space-y-2">
+                            {% for scan in item_scans %}
+                            <div class="bg-white p-3 rounded border">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Cantidad: {{ scan.scanned_items }}</p>
+                                        <p class="text-xs text-gray-500">{{ scan.timestamp|date:"d/m/Y H:i:s" }}</p>
+                                    </div>
                                 </div>
                             </div>
+                            {% empty %}
+                            <p class="text-sm text-gray-500">No hay registros de scaneo para este ítem.</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-center p-4 text-gray-500">No se realizaron scans en esta orden.</p>
-                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                    {% empty %}
+                    <p class="text-center p-4 text-gray-500">No hay ítems registrados en esta orden.</p>
+                    {% endfor %}
                     </div>
                 </div>
             </div>
