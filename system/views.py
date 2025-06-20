@@ -18,6 +18,9 @@ from datetime import timedelta
 from django.core.paginator import Paginator
 import datetime, json
 
+def engineerGuide (request):
+    return render (request, 'system/engineerGuide.html')
+
 # ========================================
 # FUNCIONES AUXILIARES Y PERMISOS
 # ========================================

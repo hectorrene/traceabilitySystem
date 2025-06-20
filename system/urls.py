@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (activeOrdersListView, RegisterWorkOrder, registerPartNumber, closedOrdersListView, closedOrdersDetailView, LoginView, LogoutView,
                     receipts_view, add_scan_view, close_order_view, confirm_close_order_view, partNumbersListView, advance_to_next_stage, errors_view,
-                    partNumbersDetailView,  noAccess)
+                    partNumbersDetailView, noAccess, engineerGuide)
 
 urlpatterns = [
     path("", LoginView.as_view(template_name="system/login.html"), name="login"),
@@ -20,5 +20,5 @@ urlpatterns = [
     path("ordenes-cerradas/<int:pk>/", closedOrdersDetailView.as_view(), name="closedWorkOrdersDetail"),
     path('errores/', errors_view, name='errors'),
     path('pantalla-restringida/', noAccess, name='noAccess'),
-
+    path('guia-ingenieros/', engineerGuide, name='engineerGuide')
 ]

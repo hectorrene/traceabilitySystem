@@ -111,7 +111,7 @@
         updateRemoveButtons();
     });
     
-    // Update remove buttons (first row can't be removed)
+    // Update remove buttons (first row cant be removed)
     function updateRemoveButtons() {
         const rows = document.querySelectorAll('.part-row');
         if (rows.length === 1) {
@@ -122,7 +122,7 @@
     // Handle cell selection - only one per type
     function handleCellSelection(checkbox, lineType) {
         if (checkbox.checked) {
-            // Uncheck all other checkboxes of the same line type
+            // Uncheck all other boxes of the same type 
             const allCheckboxes = document.querySelectorAll(`input[data-line-type="${lineType}"]`);
             allCheckboxes.forEach(cb => {
                 if (cb !== checkbox) {

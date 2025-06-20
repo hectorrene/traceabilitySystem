@@ -1,0 +1,937 @@
+{% extends 'system/base.html' %}
+
+{% block title %}Guía del Sistema - Sistema de Trazabilidad{% endblock %}
+
+{% block content %}
+<div class="space-y">
+    <div class="header">
+        <h1 class="page-title">📚 Guía del Sistema de Trazabilidad</h1>
+    </div>
+
+    <!-- Sección Operadores -->
+    <div class="card">
+        <div class="card-header">
+            <button class="btn btn-ghost flex justify-between items-center w-full text-left" onclick="toggleSection('operadores')">
+                <h2 class="card-title">👩‍🏭 Guía para Operadores</h2>
+                <svg id="arrow-operadores" class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+        </div>
+        <div id="content-operadores" class="card-content" style="display: none;">
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-2">📋 Introducción</h3>
+                <p class="text-gray-600">Esta guía te ayudará a usar el sistema de trazabilidad para gestionar las órdenes de trabajo de manera eficiente. El sistema permite escanear piezas, hacer seguimiento del progreso y cerrar órdenes completadas.</p>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🏠 Pantalla Principal - Órdenes Activas</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">¿Qué verás?</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Lista de todas las órdenes de trabajo activas</li>
+                        <li>Información de cada orden:</li>
+                        <ul class="ml-4 list-disc">
+                            <li><strong>Nombre de la orden</strong> (ej: "prueba", "M338845")</li>
+                            <li><strong>Fecha de creación</strong></li>
+                            <li><strong>Códigos de trabajo</strong> (WC-70102, WC-70192, etc.)</li>
+                            <li><strong>Estado</strong>: "Activa" (en verde)</li>
+                        </ul>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">¿Qué hacer?</h4>
+                    <ol class="text-gray-600 space-y-1 ml-4 list-decimal">
+                        <li><strong>Selecciona tu orden de trabajo</strong> haciendo clic sobre ella</li>
+                        <li><strong>Usa el filtro</strong> si necesitas buscar un tipo específico</li>
+                        <li><strong>Haz clic en "Filtrar"</strong> para aplicar los criterios</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔍 Pantalla de Escaneo - Detalles de la Orden</h3>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-700 mb-2">Sección Izquierda: "Escanear Piezas"</h4>
+                        <p class="text-sm text-gray-600 mb-2">Campos a completar:</p>
+                        <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                            <li><strong>Celda de Trabajo</strong>: Se muestra automáticamente (ej: WC-70601)</li>
+                            <li><strong>Número de Parte</strong>:</li>
+                            <ul class="ml-4 list-disc">
+                                <li>Escanea el código de barras con tu lector</li>
+                                <li>O escribe manualmente el número</li>
+                            </ul>
+                            <li><strong>Cantidad</strong>: Ingresa cuántas piezas procesaste (por defecto: 1)</li>
+                        </ul>
+                        
+                        <p class="text-sm text-gray-600 mb-1 mt-3">Botones disponibles:</p>
+                        <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                            <li>🔴 <strong>"Agregar Escaneo"</strong>: Registra la pieza escaneada</li>
+                            <li>⚪ <strong>"Siguiente Celda"</strong>: Pasa a la siguiente estación de trabajo</li>
+                            <li>⚪ <strong>"Cerrar Orden"</strong>: Finaliza la orden cuando esté completa</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-700 mb-2">Sección Derecha: "Progreso de Escaneo"</h4>
+                        <p class="text-sm text-gray-600 mb-2">Información que verás:</p>
+                        <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                            <li><strong>Etapa actual</strong>: Muestra en qué fase estás (ej: "Empaque")</li>
+                            <li><strong>Progreso por celda</strong>:</li>
+                            <ul class="ml-4 list-disc">
+                                <li>RL-2505-01: Progreso 1/1 piezas ✅</li>
+                                <li>RL-2505-02: Progreso 1/1 piezas ✅</li>
+                            </ul>
+                            <li><strong>Celdas asignadas</strong>: Códigos WC que debes completar</li>
+                            <li><strong>Progreso Total</strong>: 2/2 (barra de progreso completa) ✅</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">✅ Cerrar Orden de Trabajo</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-3">
+                    <h4 class="font-semibold text-red-700 mb-2">Cuándo cerrar una orden:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Todas las piezas han sido escaneadas</li>
+                        <li>El progreso total muestra 100%</li>
+                        <li>Todas las celdas están completas</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-3">
+                    <h4 class="font-semibold text-red-700 mb-2">Proceso de cierre:</h4>
+                    <ol class="text-gray-600 space-y-1 ml-4 list-decimal">
+                        <li><strong>Haz clic en "Cerrar Orden"</strong></li>
+                        <li><strong>Revisa el resumen</strong>:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Total de ítems procesados</li>
+                            <li>Historial de escaneos con timestamps</li>
+                            <li>Porcentaje completado: 100%</li>
+                        </ul>
+                        <li><strong>Confirma</strong> haciendo clic en <strong>"Sí, Cerrar Orden"</strong></li>
+                        <li>O <strong>cancela</strong> si necesitas hacer ajustes</li>
+                    </ol>
+                </div>
+
+                <div class="bg-red-100 border border-red-300 p-3 rounded-lg">
+                    <p class="text-red-800"><strong>⚠️ Importante:</strong> Una vez cerrada, la orden se moverá a "Órdenes cerradas" y no podrás editarla.</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">📁 Órdenes Cerradas</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">¿Qué encontrarás?</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Órdenes completadas con estado "Cerrada"</li>
+                        <li>Fechas de creación y cierre</li>
+                        <li>Códigos de trabajo completados</li>
+                        <li>Filtros por celda para búsqueda rápida</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">💡 Consejos para Operadoras</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-2">✅ Buenas Prácticas:</h4>
+                        <ul class="text-green-700 space-y-1 text-sm ml-2 list-disc">
+                            <li><strong>Escanea inmediatamente</strong> después de procesar cada pieza</li>
+                            <li><strong>Verifica la cantidad</strong> antes de agregar el escaneo</li>
+                            <li><strong>Revisa el progreso</strong> regularmente para asegurar que no falte nada</li>
+                            <li><strong>No cierres órdenes</strong> hasta estar 100% segura de completarlas</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-800 mb-2">⚠️ Qué evitar:</h4>
+                        <ul class="text-red-700 space-y-1 text-sm ml-2 list-disc">
+                            <li>No escanees la misma pieza dos veces</li>
+                            <li>No cambies de celda sin completar la actual</li>
+                            <li>No cierres órdenes incompletas</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg mt-4">
+                    <h4 class="font-semibold text-gray-800 mb-2">🆘 Si tienes problemas:</h4>
+                    <ul class="text-gray-700 space-y-1 ml-4 list-disc">
+                        <li><strong>Error de escaneo</strong>: Verifica que el código sea legible</li>
+                        <li><strong>Orden no aparece</strong>: Usa los filtros de búsqueda</li>
+                        <li><strong>Progreso incorrecto</strong>: Contacta a tu supervisor</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔄 Flujo de Trabajo Típico</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <ol class="text-gray-600 space-y-2 ml-4 list-decimal">
+                        <li><strong>Inicia sesión</strong> en el sistema</li>
+                        <li><strong>Selecciona tu orden</strong> de la lista activa</li>
+                        <li><strong>Escanea piezas</strong> en la celda correspondiente</li>
+                        <li><strong>Agrega cada escaneo</strong> con la cantidad correcta</li>
+                        <li><strong>Avanza a la siguiente celda</strong> cuando termines</li>
+                        <li><strong>Revisa el progreso total</strong> antes de cerrar</li>
+                        <li><strong>Cierra la orden</strong> cuando esté 100% completa</li>
+                        <li><strong>Verifica</strong> que aparezca en órdenes cerradas</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="bg-red-100 border border-red-300 p-4 rounded-lg">
+                <h3 class="text-xl font-semibold text-red-800 mb-2">📞 Soporte</h3>
+                <p class="text-red-700 mb-2">Si tienes dudas o problemas técnicos, contacta a tu supervisor o al equipo de TI con:</p>
+                <ul class="text-red-700 space-y-1 ml-4 list-disc">
+                    <li>Número de orden afectada</li>
+                    <li>Descripción del problema</li>
+                    <li>Pantalla donde ocurrió el error</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+<!-- Sección Ingenieros -->
+    <div class="card">
+        <div class="card-header">
+            <button class="btn btn-ghost flex justify-between items-center w-full text-left" onclick="toggleSection('ingenieros')">
+                <h2 class="card-title">👨‍💼 Guía para Ingenieros</h2>
+                <svg id="arrow-ingenieros" class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+        </div>
+        <div id="content-ingenieros" class="card-content" style="display: none;">
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-2">📋 Introducción</h3>
+                <p class="text-gray-600">Esta guía te ayudará a usar el sistema de trazabilidad para gestionar órdenes de trabajo, registrar piezas, hacer seguimiento del progreso y resolver errores de manera eficiente.</p>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">📝 Registrar Orden de Trabajo</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Campos a completar:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Orden de trabajo</strong>: Ingresa el identificador de la orden</li>
+                        <li><strong>Número de parte y cantidades</strong>:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Selecciona el número de parte (ej: RL-2503, RL-2505)</li>
+                            <li>Especifica la cantidad requerida</li>
+                            <li>Puedes agregar múltiples partes con el botón "Añadir parte"</li>
+                        </ul>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Celdas disponibles para esta orden:</h4>
+                    <p class="text-gray-600 mb-2">El sistema mostrará automáticamente las celdas de trabajo disponibles:</p>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Ensamble</strong>: WC-70102 (selecciona solo una)</li>
+                        <li><strong>Pintura</strong>: WC-70192 (selecciona solo una)</li>
+                        <li><strong>Empaque</strong>: WC-70601 (selecciona solo una)</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-700 mb-2">Botones disponibles:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>🔴 <strong>"Registrar orden de trabajo"</strong>: Crea la nueva orden</li>
+                        <li>⚪ <strong>"Borrar campos"</strong>: Limpia todos los campos</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔧 Registrar Nueva Pieza</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Información de la pieza:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Número de parte</strong>: Ingresa el código de la pieza</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Celdas disponibles:</h4>
+                    <p class="text-gray-600 mb-2">El sistema mostrará todas las celdas organizadas por tipo:</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <h5 class="font-semibold text-red-600 mb-1">Ensamble:</h5>
+                            <ul class="text-gray-600 space-y-0.5 ml-2 list-disc">
+                                <li>WC-70101, WC-70102, WC-70103</li>
+                                <li>WC-70201, WC-70202, WC-70203</li>
+                                <li>WC-70301, WC-70302, WC-70303</li>
+                                <li>WC-70401, WC-70402, WC-70403</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold text-red-600 mb-1">Pintura:</h5>
+                            <ul class="text-gray-600 space-y-0.5 ml-2 list-disc">
+                                <li>WC-70191, WC-70192, WC-70193</li>
+                                <li>WC-70291, WC-70293, WC-70292</li>
+                                <li>WC-70491, WC-70492, WC-70493</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold text-red-600 mb-1">Empaque:</h5>
+                            <ul class="text-gray-600 space-y-0.5 ml-2 list-disc">
+                                <li>WC-70601, WC-70602, WC-70603</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-700 mb-2">Botones disponibles:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>🔴 <strong>"Registrar parte"</strong>: Guarda la nueva pieza</li>
+                        <li>⚪ <strong>"Limpiar información"</strong>: Borra los campos</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">📊 Números de Parte Registrados</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">¿Qué encontrarás?</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Vista de todos los números de parte activos</li>
+                        <li><strong>Filtro por celda</strong>: Dropdown para filtrar por tipo específico</li>
+                        <li>Cada parte muestra:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Número de parte (ej: RL-2503, RL-2504, RL-2505)</li>
+                            <li>Estado: "Activa" (en verde)</li>
+                            <li>Códigos de celdas asignadas organizados por filas</li>
+                        </ul>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Ejemplo de organización:</h4>
+                    <div class="text-gray-600 ml-4">
+                        <p><strong>RL-2503:</strong></p>
+                        <ul class="ml-4 space-y-0.5 list-disc">
+                            <li>Fila 1: WC-70101, WC-70102, WC-70103, WC-70191</li>
+                            <li>Fila 2: WC-70192, WC-70193, WC-70601</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔍 Detalles del Número de Parte</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Información básica:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Número de parte</strong>: Código identificador</li>
+                        <li><strong>ID del sistema</strong>: Número interno único</li>
+                        <li><strong>Total de celdas</strong>: Contador de celdas asignadas</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Celdas de trabajo asignadas:</h4>
+                    <p class="text-gray-600 mb-2">Cada celda muestra:</p>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Código de la celda (ej: WC-70101)</li>
+                        <li>ID interno del sistema</li>
+                        <li>Organización visual en tarjetas</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-700 mb-2">Métricas importantes:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Celdas asignadas</strong>: Número total (mostrado en rojo)</li>
+                        <li><strong>ID del sistema</strong>: Identificador único (mostrado en azul)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">⚠️ Errores del Sistema</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Pantalla de Filtros</h4>
+                    <p class="text-gray-600 mb-2">Opciones de búsqueda:</p>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Búsqueda</strong>: Por orden de trabajo, número de parte o descripción</li>
+                        <li><strong>Tipo de Error</strong>: Dropdown con "Todos los tipos"</li>
+                        <li><strong>Orden de Trabajo</strong>: Campo específico para número de orden</li>
+                        <li><strong>Rango de fechas</strong>:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Desde: Fecha inicial (formato mm/dd/yyyy)</li>
+                            <li>Hasta: Fecha final (formato mm/dd/yyyy)</li>
+                        </ul>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Botones disponibles:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>🔴 <strong>"Filtrar"</strong>: Aplica los criterios de búsqueda</li>
+                        <li>⚪ <strong>"Limpiar"</strong>: Borra todos los filtros</li>
+                    </ul>
+                </div>
+
+                <div class="bg-yellow-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Errores Registrados</h4>
+                    <p class="text-gray-600 mb-2">Información de cada error:</p>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>Tipo de error</strong>: "Esta pieza ya fue ingresada" (con ícono X)</li>
+                        <li><strong>Fecha y hora</strong>: Timestamp exacto del error</li>
+                        <li><strong>Orden de Trabajo</strong>: Código identificador (ej: WO-prueba, WO-M338845)</li>
+                        <li><strong>Número de Parte</strong>: Código de la pieza afectada</li>
+                        <li><strong>Descripción detallada</strong>: Explicación del error específico</li>
+                        <li><strong>Estado de la orden</strong>: "Orden Activa" (en verde)</li>
+                        <li><strong>Error ID</strong>: Número de seguimiento único</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-100 border border-red-300 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-800 mb-2">Tipos de errores comunes:</h4>
+                    <div class="text-red-700 ml-4">
+                        <p><strong>"Esta pieza ya fue ingresada"</strong></p>
+                        <ul class="ml-4 space-y-1 text-sm list-disc">
+                            <li>Ocurre cuando se intenta escanear la misma pieza dos veces</li>
+                            <li>Descripción: "Pieza [código] ya fue escaneada en [proceso]"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">💡 Consejos para Ingenieros</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-2">✅ Buenas Prácticas:</h4>
+                        <ul class="text-green-700 space-y-1 text-sm ml-2 list-disc">
+                            <li><strong>Configura las celdas</strong> antes de crear órdenes</li>
+                            <li><strong>Verifica la asignación</strong> de partes a celdas</li>
+                            <li><strong>Revisa la sección de errores</strong> periódicamente para detectar problemas</li>
+                            <li><strong>Mantén actualizados</strong> los números de parte activos</li>
+                            <li><strong>Documenta cambios</strong> en la configuración del sistema</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-800 mb-2">⚠️ Qué evitar:</h4>
+                        <ul class="text-red-700 space-y-1 text-sm ml-2 list-disc">
+                            <li>No elimines piezas con órdenes activas</li>
+                            <li>No modifiques celdas durante la producción</li>
+                            <li>No ignores los errores del sistema</li>
+                            <li>No crees órdenes sin verificar disponibilidad de celdas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔧 Gestión de Errores</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-red-700 mb-2">Monitoreo proactivo:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Revisa la sección "Errores del Sistema" regularmente</li>
+                        <li>Usa filtros para buscar errores específicos por fecha u orden</li>
+                        <li>Identifica patrones en los errores para mejorar procesos</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Resolución de errores:</h4>
+                    <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                        <li>Lee cuidadosamente la descripción del error</li>
+                        <li>Verifica el número de parte y la celda mencionados</li>
+                        <li>Si es necesario, contacta al supervisor con el Error ID</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-red-800 mb-3">🔄 Flujo de Trabajo para Ingenieros</h3>
+                
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <ol class="text-gray-600 space-y-2 ml-4 list-decimal">
+                        <li><strong>Inicia sesión</strong> en el sistema</li>
+                        <li><strong>Registra nuevas piezas</strong> si es necesario</li>
+                        <li><strong>Crea órdenes de trabajo</strong> con las piezas requeridas</li>
+                        <li><strong>Asigna celdas apropiadas</strong> para cada orden</li>
+                        <li><strong>Monitorea errores</strong> en tiempo real</li>
+                        <li><strong>Supervisa el progreso</strong> de las órdenes activas</li>
+                        <li><strong>Analiza órdenes cerradas</strong> para optimización</li>
+                        <li><strong>Verifica</strong> que aparezca en órdenes cerradas</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="bg-red-100 border border-red-300 p-4 rounded-lg">
+                <h3 class="text-xl font-semibold text-red-800 mb-2">📞 Soporte</h3>
+                <p class="text-red-700 mb-2">Si tienes dudas o problemas técnicos, contacta a tu supervisor o al equipo de TI con:</p>
+                <ul class="text-red-700 space-y-1 ml-4 list-disc">
+                    <li>Número de orden afectada</li>
+                    <li>Error ID (si aplica)</li>
+                    <li>Descripción del problema</li>
+                    <li>Pantalla donde ocurrió el error</li>
+                    <li>Timestamp del incidente</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+<div class="card">
+    <div class="card-header">
+        <button class="btn btn-ghost flex justify-between items-center w-full text-left" onclick="toggleSection('administradores')">
+            <h2 class="card-title">👑 Guía para Administradores</h2>
+            <svg id="arrow-administradores" class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+    </div>
+    <div id="content-administradores" class="card-content" style="display: none;">
+        
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-2">📋 Introducción</h3>
+            <p class="text-gray-600">Esta guía te ayudará a usar el panel de administración de Django para gestionar el sistema de manufactura, configurar celdas de trabajo, administrar órdenes y resolver problemas del sistema de manera eficiente.</p>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">🏭 Gestión de Celdas de Trabajo (Cells)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son las Celdas?</h4>
+                <p class="text-gray-600">Las celdas representan las estaciones de trabajo en el proceso de manufactura. Cada celda está asociada a una etapa específica del proceso productivo.</p>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">Acceder a las Celdas:</h4>
+                <ol class="text-gray-600 space-y-1 ml-4 list-decimal">
+                    <li>Ingresa al panel de administración de Django</li>
+                    <li>Busca la sección "Cells" en el menú principal</li>
+                    <li>Haz clic en "Cells" para ver todas las celdas registradas</li>
+                </ol>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-700 mb-2">¿Qué verás?</h4>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Lista de celdas activas</strong> con información de:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Nombre de la celda (ej: "WC-70102", "PAINT-A")</li>
+                            <li>Tipo de línea (Ensamble, Pintura, Empaque)</li>
+                            <li>ID del sistema</li>
+                        </ul>
+                    </ul>
+                </div>
+
+                <div class="bg-red-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Crear Nueva Celda - Campos:</h4>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Work cell</strong>: Código único (ej: "WC-70104")</li>
+                        <li><strong>Line Type</strong>: Tipo de proceso:</li>
+                        <ul class="ml-4 list-disc">
+                            <li>Ensamble: Montaje inicial</li>
+                            <li>Pintura: Acabados y recubrimientos</li>
+                            <li>Empaque: Preparación final</li>
+                        </ul>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-300 p-3 rounded-lg">
+                <h4 class="font-semibold text-yellow-800 mb-2">⚠️ Consideraciones Importantes:</h4>
+                <ul class="text-yellow-700 space-y-1 text-sm ml-2 list-disc">
+                    <li>El nombre de la celda debe ser único en el sistema</li>
+                    <li>No elimines celdas que estén siendo usadas en órdenes activas</li>
+                    <li>Los cambios en el tipo de línea afectarán el routing de ítems existentes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">📦 Gestión de Números de Parte (Items)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son los Items?</h4>
+                <p class="text-gray-600">Los ítems representan los números de parte que se fabrican. Cada ítem tiene un routing definido que especifica por qué celdas debe pasar durante el proceso.</p>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué encontrarás?</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li><strong>Vista de todos los números de parte</strong> con:</li>
+                    <ul class="ml-4 list-disc">
+                        <li>Código del número de parte (ej: "RL-2503", "MOTOR-V8")</li>
+                        <li>Celdas asignadas para el routing</li>
+                        <li>Estado activo/inactivo</li>
+                    </ul>
+                </ul>
+            </div>
+
+            <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Crear Nuevo Item - Campos:</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li><strong>Part number</strong>: Código único del número de parte</li>
+                    <li><strong>Cells</strong>: Selecciona múltiples celdas para definir el routing</li>
+                    <ul class="ml-4 list-disc">
+                        <li>Mantén presionado Ctrl (Windows) o Cmd (Mac) para múltiples</li>
+                        <li>El orden de selección NO afecta el flujo</li>
+                        <li>El sistema sigue: Ensamble → Pintura → Empaque</li>
+                    </ul>
+                </ul>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-blue-700 mb-2">Ejemplo de configuración:</h4>
+                <div class="text-gray-600 ml-4">
+                    <p><strong>Número de parte:</strong> RL-2503</p>
+                    <p><strong>Celdas seleccionadas:</strong></p>
+                    <ul class="ml-4 space-y-0.5 list-disc">
+                        <li>WC-70102 (Ensamble)</li>
+                        <li>WC-70192 (Pintura)</li>
+                        <li>WC-70601 (Empaque)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">📋 Gestión de Órdenes de Trabajo (Work Orders)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son las Work Orders?</h4>
+                <p class="text-gray-600">Las órdenes de trabajo agrupan múltiples ítems que deben ser procesados juntos y siguen un flujo secuencial por las etapas del proceso.</p>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué verás? - Información de cada orden:</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li>Número de la orden (ej: "2024-001", "M338845")</li>
+                    <li>Estado: Activa (True) o Cerrada (False)</li>
+                    <li>Etapa actual (Ensamble, Pintura, Empaque)</li>
+                    <li>Fecha de creación</li>
+                    <li>Fecha de cierre (si aplica)</li>
+                    <li>Usuario que cerró la orden</li>
+                    <li>Celdas asignadas</li>
+                </ul>
+            </div>
+
+            <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Crear Nueva Orden - Campos principales:</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li><strong>Number</strong>: Identificador único de la orden</li>
+                    <li><strong>Status</strong>:</li>
+                    <ul class="ml-4 list-disc">
+                        <li>✅ Marcado = Ordem activa</li>
+                        <li>❌ Desmarcado = Orden cerrada</li>
+                    </ul>
+                    <li><strong>Current stage</strong>: Etapa actual del proceso</li>
+                    <li><strong>Cells</strong>: Celdas asignadas a esta orden</li>
+                    <li><strong>Pub date</strong>: Se establece automáticamente</li>
+                </ul>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead class="bg-red-100">
+                        <tr>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Estado</th>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Descripción</th>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Acciones Disponibles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="border border-gray-200 px-4 py-2 font-semibold">Activa</td>
+                            <td class="border border-gray-200 px-4 py-2">En proceso de manufactura</td>
+                            <td class="border border-gray-200 px-4 py-2">Escanear piezas, cambiar etapa, cerrar</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-200 px-4 py-2 font-semibold">Cerrada</td>
+                            <td class="border border-gray-200 px-4 py-2">Completada y finalizada</td>
+                            <td class="border border-gray-200 px-4 py-2">Solo consulta, no editable</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">🔧 Gestión de Items en Órdenes (Work Order Items)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son los Work Order Items?</h4>
+                <p class="text-gray-600">Representan la relación entre órdenes de trabajo e ítems específicos, implementando el sistema de serialización automática.</p>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">Crear Nuevo Work Order Item - Campos:</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li><strong>Workorders</strong>: Selecciona la orden de trabajo</li>
+                    <li><strong>Items</strong>: Selecciona el número de parte base</li>
+                    <li><strong>Quantity</strong>: Cantidad de piezas solicitadas</li>
+                    <li><strong>Serialized part number</strong>: Se genera automáticamente</li>
+                </ul>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-blue-700 mb-2">Sistema de Serialización Automática - Ejemplo:</h4>
+                <div class="text-gray-600 ml-4">
+                    <p><strong>Input:</strong></p>
+                    <ul class="ml-4 space-y-0.5 list-disc">
+                        <li>Número de parte base: MOTOR-V8</li>
+                        <li>Cantidad: 3</li>
+                    </ul>
+                    <p class="mt-2"><strong>Output automático:</strong></p>
+                    <ul class="ml-4 space-y-0.5 list-disc">
+                        <li>MOTOR-V8-01</li>
+                        <li>MOTOR-V8-02</li>
+                        <li>MOTOR-V8-03</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">📊 Monitoreo de Escaneos (Scans)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son los Scans?</h4>
+                <p class="text-gray-600">Registran cada escaneo de una pieza en el sistema, permitiendo rastrear el progreso individual de cada ítem.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Información de cada escaneo:</h4>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li>Work Order Item asociado</li>
+                        <li>Número de parte base</li>
+                        <li>Timestamp del escaneo</li>
+                        <li>Cantidad de ítems escaneados</li>
+                        <li>ID único del escaneo</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-700 mb-2">Métricas importantes:</h4>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Frecuencia de escaneos</strong>: Identifica cuellos de botella</li>
+                        <li><strong>Timestamp analysis</strong>: Determina tiempos de proceso</li>
+                        <li><strong>Quantity tracking</strong>: Valida cantidades procesadas</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-blue-700 mb-2">Filtros Útiles:</h4>
+                <ul class="text-gray-600 space-y-1 ml-4 list-disc">
+                    <li><strong>Por orden de trabajo</strong>: Ver escaneos de una orden específica</li>
+                    <li><strong>Por fecha</strong>: Analizar productividad por período</li>
+                    <li><strong>Por ítem</strong>: Seguimiento de números de parte específicos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">⚠️ Gestión de Errores (Errors)</h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-red-700 mb-2">¿Qué son los Errors?</h4>
+                <p class="text-gray-600">El sistema registra automáticamente todos los errores y excepciones que ocurren durante el proceso de escaneo.</p>
+            </div>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead class="bg-red-100">
+                        <tr>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Tipo</th>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Código</th>
+                            <th class="border border-gray-200 px-4 py-2 text-left text-red-800">Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="border border-gray-200 px-4 py-2">Exceso de límite</td>
+                            <td class="border border-gray-200 px-4 py-2 font-mono">exceeded_limit</td>
+                            <td class="border border-gray-200 px-4 py-2">Más piezas de las requeridas</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-200 px-4 py-2">Piezas faltantes</td>
+                            <td class="border border-gray-200 px-4 py-2 font-mono">missing_parts</td>
+                            <td class="border border-gray-200 px-4 py-2">Faltan piezas para completar</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-200 px-4 py-2">Ya ingresada</td>
+                            <td class="border border-gray-200 px-4 py-2 font-mono">already_entered</td>
+                            <td class="border border-gray-200 px-4 py-2">Pieza escaneada dos veces</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-200 px-4 py-2">Orden incorrecta</td>
+                            <td class="border border-gray-200 px-4 py-2 font-mono">wrong_work_order</td>
+                            <td class="border border-gray-200 px-4 py-2">Pieza no pertenece a la orden</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-200 px-4 py-2">Celda incorrecta</td>
+                            <td class="border border-gray-200 px-4 py-2 font-mono">wrong_cell</td>
+                            <td class="border border-gray-200 px-4 py-2">Pieza en etapa incorrecta</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-red-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-red-700 mb-2">Resolución de Errores - Pasos recomendados:</h4>
+                <ol class="text-gray-600 space-y-1 ml-4 list-decimal">
+                    <li><strong>Identificar el patrón</strong>: ¿Es un error recurrente?</li>
+                    <li><strong>Verificar la orden</strong>: ¿La orden está configurada correctamente?</li>
+                    <li><strong>Revisar el routing</strong>: ¿Las celdas están bien asignadas?</li>
+                    <li><strong>Entrenar operadores</strong>: ¿Se necesita capacitación adicional?</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">🔧 Herramientas de Administración Avanzada</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Búsqueda y Filtros</h4>
+                    <p class="text-gray-600 mb-2">En cada modelo puedes usar:</p>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Barra de búsqueda</strong>: Busca por campos específicos</li>
+                        <li><strong>Filtros laterales</strong>: Filtra por estado, tipo, fecha</li>
+                        <li><strong>Ordenamiento</strong>: Haz clic en columnas para ordenar</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-700 mb-2">Acciones en Lote</h4>
+                    <p class="text-gray-600 mb-2">Selecciona múltiples elementos para:</p>
+                    <ul class="text-gray-600 space-y-1 text-sm ml-2 list-disc">
+                        <li>Eliminar elementos seleccionados</li>
+                        <li>Cambiar estado de múltiples órdenes</li>
+                        <li>Exportar datos para análisis</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">💡 Mejores Prácticas para Administradores</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-green-800 mb-2">✅ Configuración Inicial:</h4>
+                    <ul class="text-green-700 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Configura las celdas primero</strong> antes de crear ítems</li>
+                        <li><strong>Define el routing completo</strong> para cada número de parte</li>
+                        <li><strong>Establece convenciones</strong> de nomenclatura consistentes</li>
+                        <li><strong>Configura usuarios y permisos</strong> apropiados</li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-blue-800 mb-2">✅ Mantenimiento Regular:</h4>
+                    <ul class="text-blue-700 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Revisa errores semanalmente</strong> para identificar patrones</li>
+                        <li><strong>Limpia órdenes cerradas</strong> periódicamente</li>
+                        <li><strong>Actualiza routing</strong> cuando cambien procesos</li>
+                        <li><strong>Verifica consistencia</strong> de datos regularmente</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-purple-800 mb-2">✅ Monitoreo de Performance:</h4>
+                    <ul class="text-purple-700 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>Analiza métricas de escaneo</strong> para optimizar</li>
+                        <li><strong>Identifica cuellos de botella</strong> en celdas</li>
+                        <li><strong>Revisa tiempos de ciclo</strong> por orden</li>
+                        <li><strong>Optimiza asignación</strong> basado en capacidad</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-800 mb-2">⚠️ Qué Evitar:</h4>
+                    <ul class="text-red-700 space-y-1 text-sm ml-2 list-disc">
+                        <li><strong>No elimines datos históricos</strong> sin respaldo</li>
+                        <li><strong>No modifiques órdenes activas</strong> sin coordinación</li>
+                        <li><strong>No cambies routing</strong> de ítems en proceso</li>
+                        <li><strong>No ignores errores recurrentes</strong> del sistema</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-red-800 mb-3">🆘 Resolución de Problemas Comunes</h3>
+            
+            <div class="space-y-4">
+                <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg">
+                    <h4 class="font-semibold text-yellow-800 mb-2">Problema: Órdenes no aparecen en el sistema</h4>
+                    <ul class="text-yellow-700 space-y-1 ml-4 list-disc">
+                        <li>Verifica que el status esté en True (activa)</li>
+                        <li>Revisa que las celdas estén correctamente asignadas</li>
+                        <li>Confirma que los ítems tengan routing válido</li>
+                    </ul>
+                </div>
+
+                <div class="bg-orange-50 border border-orange-300 p-4 rounded-lg">
+                    <h4 class="font-semibold text-orange-800 mb-2">Problema: Errores de escaneo frecuentes</h4>
+                    <ul class="text-orange-700 space-y-1 ml-4 list-disc">
+                        <li>Revisa la configuración de celdas para los ítems afectados</li>
+                        <li>Verifica que el routing sea correcto</li>
+                        <li>Capacita a operadores en el uso correcto del sistema</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 border border-red-300 p-4 rounded-lg">
+                    <h4 class="font-semibold text-red-800 mb-2">Problema: Datos inconsistentes</h4>
+                    <ul class="text-red-700 space-y-1 ml-4 list-disc">
+                        <li>Usa los filtros de Django admin para identificar problemas</li>
+                        <li>Revisa relaciones entre modelos</li>
+                        <li>Considera ejecutar scripts de limpieza de datos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <script>
+    function toggleSection(sectionId) {
+        const content = document.getElementById('content-' + sectionId);
+        const arrow = document.getElementById('arrow-' + sectionId);
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            arrow.style.transform = 'rotate(180deg)';
+        } else {
+            content.style.display = 'none';
+            arrow.style.transform = 'rotate(0deg)';
+        }
+    }
+    </script>
+
+{% endblock %}
